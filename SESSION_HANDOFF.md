@@ -1,6 +1,6 @@
 # HTF Manager Development Handoff
 
-This document is the preferred entry point when development continues in a new ChatGPT conversation or on another workstation.
+This document is the preferred entry point when continuing development on a new workstation.
 
 ## Current baseline
 
