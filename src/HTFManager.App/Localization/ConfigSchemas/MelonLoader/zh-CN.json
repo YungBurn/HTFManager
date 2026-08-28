@@ -1,0 +1,179 @@
+{
+  "sections": {
+    "loader": "加载器",
+    "console": "控制台",
+    "logs": "日志",
+    "mono_debug_server": "Mono 调试服务器",
+    "unityengine": "Unity 引擎"
+  },
+  "entries": {
+    "loader/disable": {
+      "title": "禁用 MelonLoader 模组加载",
+      "description": "禁用 MelonLoader 的模组和插件加载，效果等同于使用 --no-mods 启动选项。",
+      "recommendation": "正常使用 MelonLoader 模组时应保持 false。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "loader/debug_mode": {
+      "title": "调试模式",
+      "description": "启用 MelonLoader 调试模式，用于开发、日志诊断和调试服务器等功能。",
+      "recommendation": "仅在开发或排查问题时启用。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "loader/capture_player_logs": {
+      "title": "捕获 Unity Player 日志",
+      "description": "即使游戏本身关闭了部分日志，也尝试将 Unity Player 日志捕获到 MelonLoader 日志中。某些 Unity 版本下日志量会很大。",
+      "recommendation": "排查问题时有用；日志过多时可关闭。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "loader/harmony_log_level": {
+      "title": "Harmony 日志详细程度",
+      "description": "设置写入 MelonLoader 日志的 Harmony 最大详细级别。Debug 与 IL 会产生更多调试输出。",
+      "recommendation": "普通使用建议保持 Warn。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "loader/force_quit": {
+      "title": "强制退出修复",
+      "description": "用于解决少数游戏关闭时进程卡住的问题。没有退出冻结问题时不需要开启。",
+      "recommendation": "仅在游戏退出后无法结束进程时尝试启用。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "loader/disable_start_screen": {
+      "title": "禁用 MelonLoader 启动画面",
+      "description": "关闭 MelonLoader 在游戏启动期间显示的开始屏幕。",
+      "recommendation": "仅影响启动体验，可按个人偏好设置。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "loader/launch_debugger": {
+      "title": "启动并等待调试器",
+      "description": "启动游戏时启动或等待 .NET 调试器连接。主要用于开发场景，可能让游戏停在启动阶段等待调试器。",
+      "recommendation": "普通用户请保持关闭。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "loader/theme": {
+      "title": "加载器主题",
+      "description": "设置 MelonLoader 控制台或加载器界面的主题模式。",
+      "recommendation": "仅影响显示效果，可按个人偏好设置。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "console/hide_warnings": {
+      "title": "隐藏控制台警告",
+      "description": "隐藏 MelonLoader 控制台中的警告消息。开启后可能错过模组兼容性或加载问题提示。",
+      "recommendation": "排查问题时建议保持 false。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "console/hide_console": {
+      "title": "隐藏控制台",
+      "description": "启动游戏时隐藏 MelonLoader 控制台窗口。日志仍可写入日志文件。",
+      "recommendation": "日常游玩可按偏好开启；排查问题时建议显示控制台。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "console/console_on_top": {
+      "title": "控制台始终置顶",
+      "description": "强制 MelonLoader 控制台窗口保持在其他应用窗口上方。",
+      "recommendation": "通常保持关闭。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "console/dont_set_title": {
+      "title": "保留原始控制台标题",
+      "description": "不让 MelonLoader 修改宿主控制台窗口标题。",
+      "recommendation": "通常保持默认值。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "logs/max_logs": {
+      "title": "最大日志文件数量",
+      "description": "限制 MelonLoader Logs 文件夹中保留的日志数量。设置为 0 表示不限制。",
+      "recommendation": "默认数量适合大多数用户。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "mono_debug_server/debug_suspend": {
+      "title": "等待 Mono 调试器连接",
+      "description": "在调试模式下，让 Mono 调试服务器等待调试器连接后再继续启动。游戏可能会停在启动阶段。",
+      "recommendation": "仅供开发和调试使用。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "mono_debug_server/debug_ip_address": {
+      "title": "Mono 调试服务器地址",
+      "description": "设置 Mono 调试服务器监听的 IP 地址。错误设置可能导致调试器无法连接或暴露调试端口。",
+      "recommendation": "本机调试建议保持 127.0.0.1。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "mono_debug_server/debug_port": {
+      "title": "Mono 调试服务器端口",
+      "description": "设置 Mono 调试服务器监听端口。端口冲突时调试服务器可能无法启动。",
+      "recommendation": "除非端口冲突，否则保持默认值。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "unityengine/version_override": {
+      "title": "覆盖 Unity 引擎版本",
+      "description": "强制 MelonLoader 使用指定的 Unity 引擎版本，而不是自动检测结果。错误版本可能导致加载失败。",
+      "recommendation": "How to Fish 能正常检测 Unity 版本时请留空。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "unityengine/disable_console_log_cleaner": {
+      "title": "禁用 Unity 控制台日志清理器",
+      "description": "禁用 MelonLoader 的 Unity 控制台日志清理功能。该选项主要影响 IL2CPP 环境。",
+      "recommendation": "How to Fish 当前为 Mono 游戏，建议保持默认值。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "unityengine/force_offline_generation": {
+      "title": "强制离线程序集生成",
+      "description": "强制 IL2CPP 程序集生成器不连接远程 API。该选项用于 IL2CPP 游戏。",
+      "recommendation": "How to Fish 当前为 Mono 游戏，请保持默认值。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "unityengine/force_generator_regex": {
+      "title": "强制程序集生成器正则表达式",
+      "description": "强制 IL2CPP 程序集生成器使用指定的匹配正则表达式。",
+      "recommendation": "How to Fish 当前为 Mono 游戏，请保持默认值。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "unityengine/force_il2cpp_dumper_version": {
+      "title": "强制 IL2CPP Dumper 版本",
+      "description": "指定 IL2CPP 程序集生成流程使用的 Dumper 版本。",
+      "recommendation": "How to Fish 当前为 Mono 游戏，请保持默认值。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "unityengine/force_regeneration": {
+      "title": "强制重新生成程序集",
+      "description": "要求 IL2CPP Assembly Generator 每次都重新生成支持程序集。",
+      "recommendation": "How to Fish 当前为 Mono 游戏，请保持默认值。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "unityengine/enable_cpp2il_call_analyzer": {
+      "title": "启用 Cpp2IL CallAnalyzer",
+      "description": "启用 Cpp2IL 的 CallAnalyzer 处理器，用于 IL2CPP 程序集分析。",
+      "recommendation": "How to Fish 当前为 Mono 游戏，请保持默认值。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "unityengine/enable_cpp2il_native_method_detector": {
+      "title": "启用 Cpp2IL NativeMethodDetector",
+      "description": "启用 Cpp2IL 的 NativeMethodDetector 处理器，用于 IL2CPP 原生方法分析。",
+      "recommendation": "How to Fish 当前为 Mono 游戏，请保持默认值。",
+      "advanced": true,
+      "restartRequired": true
+    }
+  }
+}

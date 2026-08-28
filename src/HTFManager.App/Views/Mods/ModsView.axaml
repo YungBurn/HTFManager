@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="HTFManager.App.Views.Mods.ModsView">
+  <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="30,28">
+    <StackPanel Spacing="5">
+      <TextBlock Classes="h1" Text="{DynamicResource Mods.Title}" />
+      <TextBlock Classes="secondary" Text="{DynamicResource Mods.Subtitle}" />
+    </StackPanel>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,150,145,Auto,Auto,Auto" Margin="0,22,0,10" ColumnSpacing="10">
+      <TextBox x:Name="SearchBox" PlaceholderText="{DynamicResource Mods.Search}" TextChanged="SearchBox_TextChanged" />
+      <ComboBox x:Name="LoaderFilterCombo" Grid.Column="1" SelectionChanged="LoaderFilter_SelectionChanged" />
+      <ComboBox x:Name="OwnershipFilterCombo" Grid.Column="2" SelectionChanged="OwnershipFilter_SelectionChanged" />
+      <Button Grid.Column="3" Classes="primary" Click="Import_Click">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <PathIcon Data="{StaticResource Icon.Download}" Width="15" Height="15" />
+          <TextBlock Text="{DynamicResource Mods.Import}" />
+        </StackPanel>
+      </Button>
+      <Button Grid.Column="4" Classes="secondary" Click="CheckUpdates_Click">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <PathIcon Data="{StaticResource Icon.Download}" Width="15" Height="15" />
+          <TextBlock Text="{DynamicResource Mods.CheckUpdates}" />
+        </StackPanel>
+      </Button>
+      <Button Grid.Column="5" Classes="secondary" Click="Refresh_Click">
+        <PathIcon Data="{StaticResource Icon.Refresh}" Width="15" Height="15" />
+      </Button>
+    </Grid>
+
+    <StackPanel Grid.Row="2" Spacing="3" Margin="2,0,0,10">
+      <TextBlock Text="{DynamicResource Mods.RestartHint}" Classes="secondary" FontSize="11" />
+      <TextBlock Text="{DynamicResource Mods.ManagementHint}" Classes="secondary" FontSize="11" />
+      <TextBlock Text="{DynamicResource Mods.DropHint}" Classes="secondary" FontSize="11" />
+    </StackPanel>
+
+    <ScrollViewer Grid.Row="3">
+      <StackPanel x:Name="ModList" Spacing="8" />
+    </ScrollViewer>
+  </Grid>
+</UserControl>

@@ -1,0 +1,182 @@
+{
+  "sections": {
+    "Caching": "缓存",
+    "Chainloader": "链式加载器",
+    "Harmony.Logger": "Harmony 日志",
+    "Logging": "日志",
+    "Logging.Console": "日志控制台",
+    "Logging.Disk": "磁盘日志",
+    "Preloader": "预加载器",
+    "Preloader.Entrypoint": "预加载入口"
+  },
+  "entries": {
+    "Caching/EnableAssemblyCache": {
+      "title": "启用程序集缓存",
+      "description": "启用或禁用程序集元数据缓存。启用后，BepInEx 会缓存已发现插件与补丁器的类型元数据，从而加快后续启动时的扫描速度。",
+      "recommendation": "建议保持启用。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "Chainloader/HideManagerGameObject": {
+      "title": "隐藏 BepInEx 管理对象",
+      "description": "启用后，BepInEx 会尝试从 Unity 中隐藏其管理 GameObject。该选项主要用于解决少数游戏阻止 BepInEx 加载的问题，部分旧版插件可能因此受到影响。",
+      "recommendation": "如果游戏和模组工作正常，建议保持默认值。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Harmony.Logger/LogChannels": {
+      "title": "Harmony 日志通道",
+      "description": "指定 BepInEx 要记录的 Harmony 日志通道。IL 等高详细度日志会产生大量输出，主要用于补丁调试。",
+      "recommendation": "普通使用建议保持默认日志级别。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Logging/UnityLogListening": {
+      "title": "接收 Unity 日志",
+      "description": "允许 BepInEx 日志系统接收 Unity 自身产生的日志消息。",
+      "recommendation": "建议保持启用，便于排查游戏和模组问题。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "Logging/LogConsoleToUnityLog": {
+      "title": "将标准输出写入 Unity 日志",
+      "description": "将标准输出消息额外写入 Unity 日志。多数 Unity 游戏会自行处理标准输出，通常不需要开启。",
+      "recommendation": "如果 Unity 日志中缺少控制台输出时再考虑启用。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Logging.Console/Enabled": {
+      "title": "显示 BepInEx 控制台",
+      "description": "启动游戏时显示 BepInEx 日志控制台，可实时查看加载过程、警告和错误。",
+      "recommendation": "排查模组问题时建议启用；日常游玩可按需要关闭。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "Logging.Console/PreventClose": {
+      "title": "防止关闭控制台",
+      "description": "阻止用户直接关闭 BepInEx 控制台窗口，以避免某些平台下关闭控制台影响游戏进程。",
+      "recommendation": "通常保持默认值即可。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Logging.Console/ShiftJisEncoding": {
+      "title": "使用 Shift-JIS 控制台编码",
+      "description": "让控制台使用 Shift-JIS 编码而不是 UTF-8。仅在特定语言环境或旧式控制台编码需求下使用。",
+      "recommendation": "简体中文与一般 Windows 环境建议保持默认值。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Logging.Console/StandardOutType": {
+      "title": "标准输出重定向方式",
+      "description": "控制 BepInEx 如何选择和重定向标准输出句柄。错误设置可能导致控制台输出不可见。",
+      "recommendation": "建议保持 Auto。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Logging.Console/LogLevels": {
+      "title": "控制台日志级别",
+      "description": "指定哪些级别的日志消息显示在 BepInEx 控制台中。启用 Debug 会明显增加日志量。",
+      "recommendation": "普通使用建议保持默认值；排查问题时再增加 Debug。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "Logging.Disk/WriteUnityLog": {
+      "title": "将 Unity 日志写入磁盘",
+      "description": "将 Unity 日志消息一并写入 BepInEx 的磁盘日志文件。",
+      "recommendation": "排查 Unity 相关问题时有用，日常可保持默认。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "Logging.Disk/AppendLog": {
+      "title": "追加写入日志文件",
+      "description": "游戏启动时在现有日志末尾继续写入，而不是覆盖旧日志。长期启用可能让日志文件持续增大。",
+      "recommendation": "通常保持默认值。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "Logging.Disk/Enabled": {
+      "title": "启用磁盘日志",
+      "description": "允许 BepInEx 将日志消息写入磁盘文件，便于启动失败或模组报错后的排查。",
+      "recommendation": "建议保持启用。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "Logging.Disk/LogLevels": {
+      "title": "磁盘日志级别",
+      "description": "指定哪些级别的日志消息写入磁盘日志。更高详细度会增加日志体积。",
+      "recommendation": "普通使用建议保持默认值。",
+      "advanced": false,
+      "restartRequired": true
+    },
+    "Logging.Disk/InstantFlushing": {
+      "title": "即时刷新磁盘日志",
+      "description": "收到日志后立即写入磁盘。对调试崩溃有帮助，但大量日志时可能明显影响性能。",
+      "recommendation": "仅在排查崩溃或日志丢失时临时开启。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Logging.Disk/ConcurrentFileLimit": {
+      "title": "并发日志文件上限",
+      "description": "限制同时写入的 BepInEx 日志文件数量。通常只有同时运行多个游戏实例时才需要调整。",
+      "recommendation": "单实例游玩建议保持默认值。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Preloader/ApplyRuntimePatches": {
+      "title": "应用运行时补丁",
+      "description": "控制 BepInEx 预加载器是否应用运行时补丁。关闭后可能导致依赖预加载补丁的模组无法工作。",
+      "recommendation": "除非正在解决特定 Harmony 或运行时问题，否则建议保持启用。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Preloader/HarmonyBackend": {
+      "title": "Harmony 后端",
+      "description": "指定 Harmony 补丁使用的 MonoMod 后端。该选项主要用于开发和调试，其他代码也可能覆盖此设置。",
+      "recommendation": "建议保持 auto。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Preloader/DumpAssemblies": {
+      "title": "导出已补丁程序集",
+      "description": "将经过预加载补丁处理的程序集保存到 BepInEx/DumpedAssemblies，主要用于开发者检查补丁结果。",
+      "recommendation": "普通用户建议保持关闭。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Preloader/LoadDumpedAssemblies": {
+      "title": "加载已导出的程序集",
+      "description": "从 BepInEx/DumpedAssemblies 加载已补丁程序集，而不是使用内存中的补丁结果。主要用于调试器工作流。",
+      "recommendation": "普通用户建议保持关闭。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Preloader/BreakBeforeLoadAssemblies": {
+      "title": "加载程序集前中断调试器",
+      "description": "在加载已补丁程序集前触发调试中断，供开发者在调试器中设置断点。",
+      "recommendation": "普通用户请保持关闭。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Preloader.Entrypoint/Assembly": {
+      "title": "入口程序集",
+      "description": "指定 BepInEx 预加载器用于寻找启动入口的 Unity 程序集文件。错误修改可能导致 BepInEx 无法启动。",
+      "recommendation": "除非明确进行兼容性调试，否则不要修改。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Preloader.Entrypoint/Type": {
+      "title": "入口类型",
+      "description": "指定预加载入口程序集内用于查找入口方法的类型。错误修改可能导致 BepInEx 无法加载。",
+      "recommendation": "除非明确进行兼容性调试，否则不要修改。",
+      "advanced": true,
+      "restartRequired": true
+    },
+    "Preloader.Entrypoint/Method": {
+      "title": "入口方法",
+      "description": "指定 BepInEx 注入并启动 Chainloader 的方法名。错误修改可能导致加载器完全无法启动。",
+      "recommendation": "除非明确进行兼容性调试，否则不要修改。",
+      "advanced": true,
+      "restartRequired": true
+    }
+  }
+}

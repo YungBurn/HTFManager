@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="HTFManager.App.Views.Home.HomeView">
+  <ScrollViewer>
+    <StackPanel Margin="30,28" Spacing="24">
+      <StackPanel Spacing="5">
+        <TextBlock Classes="h1" Text="{DynamicResource Home.Title}" />
+        <TextBlock Classes="secondary" Text="{DynamicResource Home.Subtitle}" />
+      </StackPanel>
+
+      <Grid ColumnDefinitions="*,*,*" ColumnSpacing="14">
+        <Border Grid.Column="0" Classes="card">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="section" Text="{DynamicResource Home.InstalledMods}" />
+            <TextBlock x:Name="InstalledCountText" FontSize="32" FontWeight="SemiBold" />
+            <TextBlock x:Name="EnabledCountText" Classes="secondary" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="1" Classes="card">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="section" Text="{DynamicResource Home.Environment}" />
+            <TextBlock x:Name="EnvironmentText" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock x:Name="BepVersionText" Classes="secondary" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="2" Classes="card">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="section" Text="{DynamicResource Right.Profile}" />
+            <TextBlock x:Name="ProfileText" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock x:Name="GameVersionText" Classes="secondary" />
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <Border Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="section" Text="{DynamicResource Home.GamePath}" />
+          <TextBlock x:Name="GamePathText" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+          <Border Width="38" Height="38" CornerRadius="19" Background="{DynamicResource Brush.Elevated}">
+            <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+              <PathIcon x:Name="HealthCheckIcon" Data="{StaticResource Icon.Check}" Width="17" Height="17"
+                        Foreground="{DynamicResource Brush.Success}" />
+              <PathIcon x:Name="HealthWarningIcon" Data="{StaticResource Icon.Warning}" Width="17" Height="17"
+                        Foreground="{DynamicResource Brush.Warning}" IsVisible="False" />
+            </Grid>
+          </Border>
+          <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+            <TextBlock x:Name="HealthTitle" Classes="h2" />
+            <TextBlock x:Name="HealthDetail" Classes="secondary" TextWrapping="Wrap" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

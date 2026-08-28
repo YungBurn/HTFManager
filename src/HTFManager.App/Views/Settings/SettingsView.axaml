@@ -1,0 +1,131 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="HTFManager.App.Views.Settings.SettingsView">
+  <ScrollViewer>
+    <StackPanel Margin="30,28" Spacing="22">
+      <StackPanel Spacing="5">
+        <TextBlock Classes="h1" Text="{DynamicResource Settings.Title}" />
+        <TextBlock Classes="secondary" Text="{DynamicResource Settings.Subtitle}" />
+      </StackPanel>
+
+      <Border Classes="card">
+        <Grid ColumnDefinitions="*,240" ColumnSpacing="24">
+          <StackPanel Spacing="5">
+            <TextBlock Classes="h2" Text="{DynamicResource Settings.Language}" />
+            <TextBlock Classes="secondary" Text="{DynamicResource Settings.LanguageDescription}" TextWrapping="Wrap" />
+          </StackPanel>
+          <ComboBox x:Name="LanguageCombo" Grid.Column="1" SelectionChanged="LanguageCombo_SelectionChanged">
+            <ComboBoxItem Tag="zh-CN" Content="简体中文" />
+            <ComboBoxItem Tag="en-US" Content="English" />
+          </ComboBox>
+        </Grid>
+      </Border>
+
+      <Border Classes="card">
+        <StackPanel Spacing="16">
+          <StackPanel Spacing="5">
+            <TextBlock Classes="h2" Text="{DynamicResource Settings.ModManagement}" />
+            <TextBlock Classes="secondary" Text="{DynamicResource Settings.ModManagementDescription}" TextWrapping="Wrap" />
+          </StackPanel>
+
+          <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="14" ColumnSpacing="24">
+            <StackPanel>
+              <TextBlock Text="{DynamicResource Settings.AutoEnable}" FontWeight="SemiBold" />
+              <TextBlock Classes="secondary" FontSize="11" Text="{DynamicResource Settings.AutoEnableDescription}" TextWrapping="Wrap" />
+            </StackPanel>
+            <CheckBox x:Name="AutoEnableCheck" Grid.Column="1" Click="ModSetting_Click" VerticalAlignment="Center" />
+
+            <StackPanel Grid.Row="1">
+              <TextBlock Text="{DynamicResource Settings.KeepCache}" FontWeight="SemiBold" />
+              <TextBlock Classes="secondary" FontSize="11" Text="{DynamicResource Settings.KeepCacheDescription}" TextWrapping="Wrap" />
+            </StackPanel>
+            <CheckBox x:Name="KeepCacheCheck" Grid.Row="1" Grid.Column="1" Click="ModSetting_Click" VerticalAlignment="Center" />
+
+            <StackPanel Grid.Row="2">
+              <TextBlock Text="{DynamicResource Settings.PreserveConfig}" FontWeight="SemiBold" />
+              <TextBlock Classes="secondary" FontSize="11" Text="{DynamicResource Settings.PreserveConfigDescription}" TextWrapping="Wrap" />
+            </StackPanel>
+            <CheckBox x:Name="PreserveConfigCheck" Grid.Row="2" Grid.Column="1" Click="ModSetting_Click" VerticalAlignment="Center" />
+
+            <StackPanel Grid.Row="3">
+              <TextBlock Text="{DynamicResource Settings.HideDeprecated}" FontWeight="SemiBold" />
+              <TextBlock Classes="secondary" FontSize="11" Text="{DynamicResource Settings.HideDeprecatedDescription}" TextWrapping="Wrap" />
+            </StackPanel>
+            <CheckBox x:Name="HideDeprecatedCheck" Grid.Row="3" Grid.Column="1" Click="ModSetting_Click" VerticalAlignment="Center" />
+
+            <StackPanel Grid.Row="4">
+              <TextBlock Text="{DynamicResource Settings.ShowInspector}" FontWeight="SemiBold" />
+              <TextBlock Classes="secondary" FontSize="11" Text="{DynamicResource Settings.ShowInspectorDescription}" TextWrapping="Wrap" />
+            </StackPanel>
+            <CheckBox x:Name="ShowInspectorCheck" Grid.Row="4" Grid.Column="1" Click="ModSetting_Click" VerticalAlignment="Center" />
+
+            <StackPanel Grid.Row="5">
+              <TextBlock Text="{DynamicResource Settings.KeepLoaderCache}" FontWeight="SemiBold" />
+              <TextBlock Classes="secondary" FontSize="11" Text="{DynamicResource Settings.KeepLoaderCacheDescription}" TextWrapping="Wrap" />
+            </StackPanel>
+            <CheckBox x:Name="KeepLoaderCacheCheck" Grid.Row="5" Grid.Column="1" Click="ModSetting_Click" VerticalAlignment="Center" />
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card">
+        <StackPanel Spacing="16">
+          <StackPanel Spacing="5">
+            <TextBlock Classes="h2" Text="{DynamicResource Settings.ConfigBackups}" />
+            <TextBlock Classes="secondary" Text="{DynamicResource Settings.ConfigBackupsDescription}" TextWrapping="Wrap" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="14" ColumnSpacing="24">
+            <StackPanel>
+              <TextBlock Text="{DynamicResource Settings.BackupBeforeSave}" FontWeight="SemiBold" />
+              <TextBlock Classes="secondary" FontSize="11" Text="{DynamicResource Settings.BackupBeforeSaveDescription}" TextWrapping="Wrap" />
+            </StackPanel>
+            <CheckBox x:Name="BackupConfigCheck" Grid.Column="1" Click="ConfigSetting_Click" VerticalAlignment="Center" />
+
+            <StackPanel Grid.Row="1">
+              <TextBlock Text="{DynamicResource Settings.MaxConfigBackups}" FontWeight="SemiBold" />
+              <TextBlock Classes="secondary" FontSize="11" Text="{DynamicResource Settings.MaxConfigBackupsDescription}" TextWrapping="Wrap" />
+            </StackPanel>
+            <ComboBox x:Name="MaxBackupsCombo" Grid.Row="1" Grid.Column="1" Width="110" SelectionChanged="MaxBackupsCombo_SelectionChanged">
+              <ComboBoxItem Tag="5" Content="5" />
+              <ComboBoxItem Tag="10" Content="10" />
+              <ComboBoxItem Tag="20" Content="20" />
+              <ComboBoxItem Tag="50" Content="50" />
+            </ComboBox>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card">
+        <StackPanel Spacing="16">
+          <StackPanel Spacing="5">
+            <TextBlock Classes="h2" Text="{DynamicResource Settings.Advanced}" />
+            <TextBlock Classes="secondary" Text="{DynamicResource Settings.AdvancedDescription}" TextWrapping="Wrap" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
+            <StackPanel>
+              <TextBlock Text="{DynamicResource Settings.DeveloperMode}" FontWeight="SemiBold" />
+              <TextBlock Classes="secondary" FontSize="11" Text="{DynamicResource Settings.DeveloperModeDescription}" TextWrapping="Wrap" />
+            </StackPanel>
+            <CheckBox x:Name="DeveloperModeCheck" Grid.Column="1" Click="DeveloperMode_Click" VerticalAlignment="Center" />
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
+          <StackPanel Spacing="5">
+            <TextBlock Classes="h2" Text="{DynamicResource Settings.Storage}" />
+            <TextBlock Classes="secondary" Text="{DynamicResource Settings.StorageDescription}" TextWrapping="Wrap" />
+            <TextBlock x:Name="DataDirectoryText" Margin="0,7,0,0" TextWrapping="Wrap" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="secondary" Click="OpenData_Click" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <PathIcon Data="{StaticResource Icon.Folder}" Width="15" Height="15" />
+              <TextBlock Text="{DynamicResource Settings.OpenData}" />
+            </StackPanel>
+          </Button>
+        </Grid>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

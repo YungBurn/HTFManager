@@ -1,0 +1,93 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="HTFManager.App.Views.Dialogs.LoaderSetupDialog"
+        Width="680" Height="610" CanResize="False" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Brush.Window}" Title="HTF Manager">
+  <Grid RowDefinitions="*,Auto">
+    <ScrollViewer>
+      <StackPanel Margin="26" Spacing="16">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+          <Border Width="52" Height="52" CornerRadius="12" Background="{DynamicResource Brush.Elevated}">
+            <PathIcon Data="{StaticResource Icon.Tools}" Width="22" Height="22" Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+            <TextBlock x:Name="LoaderNameText" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Text="{DynamicResource LoaderSetup.Subtitle}" Classes="secondary" />
+          </StackPanel>
+        </Grid>
+
+        <Border Classes="card">
+          <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="22" RowSpacing="10">
+            <StackPanel Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource Tools.Status}" />
+              <TextBlock x:Name="StatusText" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource LoaderSetup.RecommendedVersion}" />
+              <TextBlock x:Name="RecommendedVersionText" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource Common.Version}" />
+              <TextBlock x:Name="InstalledVersionText" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource Common.Source}" />
+              <TextBlock x:Name="SourceText" />
+            </StackPanel>
+            <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource LoaderSetup.TargetGame}" />
+              <TextBlock x:Name="GamePathText" TextWrapping="Wrap" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border x:Name="MixedWarningPanel" Classes="card" BorderBrush="{DynamicResource Brush.Warning}" IsVisible="False">
+          <TextBlock Text="{DynamicResource LoaderSetup.MixedWarning}" TextWrapping="Wrap" />
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="10">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="section" Text="{DynamicResource LoaderSetup.Validation}" />
+              <Button Grid.Column="1" Classes="secondary" Click="Validate_Click">
+                <TextBlock Text="{DynamicResource LoaderSetup.Validate}" />
+              </Button>
+            </Grid>
+            <StackPanel x:Name="ValidationList" Spacing="6" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="6">
+            <TextBlock FontWeight="SemiBold" Text="{DynamicResource LoaderSetup.ManualTitle}" />
+            <TextBlock x:Name="ManualLayoutText" Classes="secondary" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="6">
+            <TextBlock FontWeight="SemiBold" Text="{DynamicResource LoaderSetup.SafetyTitle}" />
+            <TextBlock Classes="secondary" Text="{DynamicResource LoaderSetup.SafetyText}" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border Grid.Row="1" Background="{DynamicResource Brush.Sidebar}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" Padding="20,14">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="9">
+        <Button Classes="secondary" Click="OpenSource_Click">
+          <TextBlock Text="{DynamicResource LoaderSetup.OpenSource}" />
+        </Button>
+        <Button x:Name="UninstallButton" Grid.Column="2" Classes="secondary" Click="Uninstall_Click" IsVisible="False">
+          <TextBlock x:Name="UninstallButtonText" Text="{DynamicResource LoaderSetup.Uninstall}" />
+        </Button>
+        <Button Grid.Column="3" Classes="secondary" Click="Close_Click">
+          <TextBlock Text="{DynamicResource Common.Close}" />
+        </Button>
+        <Button x:Name="PrimaryButton" Grid.Column="4" Classes="primary" Click="Primary_Click" MinWidth="120">
+          <TextBlock x:Name="PrimaryButtonText" />
+        </Button>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

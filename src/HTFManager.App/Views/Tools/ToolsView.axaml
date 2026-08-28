@@ -1,0 +1,124 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="HTFManager.App.Views.Tools.ToolsView">
+  <ScrollViewer>
+    <StackPanel Margin="30,28" Spacing="18">
+      <StackPanel Spacing="5">
+        <TextBlock Classes="h1" Text="{DynamicResource Tools.Title}" />
+        <TextBlock Classes="secondary" Text="{DynamicResource Tools.Subtitle}" />
+      </StackPanel>
+
+      <Border Classes="card">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="section" Text="{DynamicResource Tools.GameInstallation}" />
+          <TextBlock Text="{DynamicResource Tools.GameDirectory}" Classes="secondary" />
+          <TextBlock x:Name="GameDirectoryText" TextWrapping="Wrap" />
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Classes="secondary" Click="SelectFolder_Click">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Data="{StaticResource Icon.Folder}" Width="15" Height="15" />
+                <TextBlock Text="{DynamicResource Tools.SelectFolder}" />
+              </StackPanel>
+            </Button>
+            <Button Classes="secondary" Click="AutoDetect_Click">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Data="{StaticResource Icon.Refresh}" Width="15" Height="15" />
+                <TextBlock Text="{DynamicResource Tools.AutoDetect}" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <TextBlock Classes="section" Text="{DynamicResource Tools.ModLoaders}" />
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+        <Border Classes="card">
+          <StackPanel Spacing="11">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <Border Width="38" Height="38" CornerRadius="9" Background="{DynamicResource Brush.Elevated}">
+                <PathIcon Data="{StaticResource Icon.Tools}" Width="17" Height="17" Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Classes="h2" Text="BepInEx" />
+                <TextBlock Text="{DynamicResource Tools.BepDescription}" Classes="secondary" FontSize="11" TextWrapping="Wrap" />
+              </StackPanel>
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="5">
+              <TextBlock Text="{DynamicResource Tools.Status}" Classes="secondary" />
+              <TextBlock x:Name="BepStatusText" Grid.Column="1" />
+              <TextBlock Grid.Row="1" Text="{DynamicResource Tools.Version}" Classes="secondary" />
+              <TextBlock x:Name="BepVersionText" Grid.Row="1" Grid.Column="1" />
+              <TextBlock Grid.Row="2" Text="{DynamicResource Tools.Recommended}" Classes="secondary" />
+              <TextBlock x:Name="BepRecommendedText" Grid.Row="2" Grid.Column="1" />
+            </Grid>
+            <WrapPanel>
+              <Button x:Name="ManageBepButton" Classes="primary" Margin="0,0,8,8" Click="ManageBep_Click">
+                <TextBlock x:Name="ManageBepButtonText" />
+              </Button>
+              <Button x:Name="OpenBepButton" Classes="secondary" Margin="0,0,8,8" Click="OpenBep_Click">
+                <TextBlock Text="{DynamicResource Tools.OpenLoaderFolder}" />
+              </Button>
+              <Button x:Name="ConfigureBepButton" Classes="secondary" Margin="0,0,8,8" Click="ConfigureBep_Click">
+                <TextBlock Text="{DynamicResource Config.Configure}" />
+              </Button>
+              <Button Classes="secondary" Margin="0,0,8,8" Click="BepSource_Click">
+                <TextBlock Text="{DynamicResource Tools.ManualGuide}" />
+              </Button>
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Column="1" Classes="card">
+          <StackPanel Spacing="11">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <Border Width="38" Height="38" CornerRadius="9" Background="{DynamicResource Brush.Elevated}">
+                <PathIcon Data="{StaticResource Icon.Tools}" Width="17" Height="17" Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Classes="h2" Text="MelonLoader" />
+                <TextBlock Text="{DynamicResource Tools.MelonDescription}" Classes="secondary" FontSize="11" TextWrapping="Wrap" />
+              </StackPanel>
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="5">
+              <TextBlock Text="{DynamicResource Tools.Status}" Classes="secondary" />
+              <TextBlock x:Name="MelonStatusText" Grid.Column="1" />
+              <TextBlock Grid.Row="1" Text="{DynamicResource Tools.Version}" Classes="secondary" />
+              <TextBlock x:Name="MelonVersionText" Grid.Row="1" Grid.Column="1" />
+              <TextBlock Grid.Row="2" Text="{DynamicResource Tools.Recommended}" Classes="secondary" />
+              <TextBlock x:Name="MelonRecommendedText" Grid.Row="2" Grid.Column="1" />
+            </Grid>
+            <WrapPanel>
+              <Button x:Name="ManageMelonButton" Classes="primary" Margin="0,0,8,8" Click="ManageMelon_Click">
+                <TextBlock x:Name="ManageMelonButtonText" />
+              </Button>
+              <Button x:Name="OpenMelonButton" Classes="secondary" Margin="0,0,8,8" Click="OpenMelon_Click">
+                <TextBlock Text="{DynamicResource Tools.OpenLoaderFolder}" />
+              </Button>
+              <Button x:Name="OpenMelonLogsButton" Classes="secondary" Margin="0,0,8,8" Click="OpenMelonLogs_Click">
+                <TextBlock Text="{DynamicResource Tools.OpenLogs}" />
+              </Button>
+              <Button x:Name="ConfigureMelonButton" Classes="secondary" Margin="0,0,8,8" Click="ConfigureMelon_Click">
+                <TextBlock Text="{DynamicResource Config.Configure}" />
+              </Button>
+              <Button Classes="secondary" Margin="0,0,8,8" Click="MelonSource_Click">
+                <TextBlock Text="{DynamicResource Tools.ManualGuide}" />
+              </Button>
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <Border Classes="card">
+        <StackPanel Spacing="12">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="section" Text="{DynamicResource Tools.Diagnostics}" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="secondary" Click="Diagnostics_Click">
+              <TextBlock Text="{DynamicResource Tools.RunDiagnostics}" />
+            </Button>
+          </Grid>
+          <StackPanel x:Name="DiagnosticsList" Spacing="7" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

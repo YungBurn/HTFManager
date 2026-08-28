@@ -1,0 +1,40 @@
+# .NET build output
+**/bin/
+**/obj/
+artifacts/
+publish/
+TestResults/
+coverage/
+*.nupkg
+*.snupkg
+
+# IDE / editor local state
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Runtime / diagnostic output
+*.log
+*.tmp
+*.bak
+*.dmp
+
+# HTF Manager local/generated artifacts
+*.htfprofile
+*.dll.disabled
+cache/
+downloads/
+staging/
+logs/
+
+# OS noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Never commit local game/runtime copies placed beside the source tree
+local-game/
+game-files/

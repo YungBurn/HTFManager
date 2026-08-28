@@ -1,0 +1,20 @@
+{
+  "project": "HTFManager",
+  "productName": "HTF Manager",
+  "version": "0.3.5.1",
+  "status": "stable-development-baseline",
+  "buildVerified": true,
+  "solution": "HTFManager.slnx",
+  "appProject": "src/HTFManager.App/HTFManager.App.csproj",
+  "targetFramework": "net10.0",
+  "uiFramework": "Avalonia 12.1.1",
+  "game": "How to Fish",
+  "supportedLoaders": [
+    "BepInEx 5",
+    "MelonLoader"
+  ],
+  "repository": "https://github.com/YungBurn/HTFManager",
+  "defaultBranch": "main",
+  "nextPlannedVersion": "0.3.6",
+  "nextPlannedFeature": "Profile Restore Assistant"
+}

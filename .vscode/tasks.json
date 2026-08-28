@@ -1,0 +1,36 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "HTF: Restore",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["restore", "HTFManager.slnx"],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "HTF: Build",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "HTFManager.slnx", "-c", "Debug"],
+      "problemMatcher": "$msCompile",
+      "group": { "kind": "build", "isDefault": true },
+      "dependsOn": "HTF: Restore"
+    },
+    {
+      "label": "HTF: Run",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["run", "--project", "src/HTFManager.App/HTFManager.App.csproj"],
+      "problemMatcher": "$msCompile",
+      "dependsOn": "HTF: Restore"
+    },
+    {
+      "label": "HTF: Publish win-x64",
+      "type": "process",
+      "command": "powershell",
+      "args": ["-ExecutionPolicy", "Bypass", "-File", "build/publish-win-x64.ps1"],
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}

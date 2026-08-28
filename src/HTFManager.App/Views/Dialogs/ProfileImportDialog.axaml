@@ -1,0 +1,89 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="HTFManager.App.Views.Dialogs.ProfileImportDialog"
+        Width="720" Height="650" MinWidth="650" MinHeight="560"
+        CanResize="True" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Brush.Window}"
+        Title="HTF Manager">
+  <Grid RowDefinitions="*,Auto">
+    <ScrollViewer>
+      <StackPanel Margin="26" Spacing="16">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+          <Border Width="52" Height="52" CornerRadius="12" Background="{DynamicResource Brush.Elevated}">
+            <PathIcon Data="{StaticResource Icon.Layers}" Width="22" Height="22"
+                      Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+            <TextBlock Classes="h2" Text="{DynamicResource ProfileImport.Title}" />
+            <TextBlock Classes="secondary" Text="{DynamicResource ProfileImport.Subtitle}" TextWrapping="Wrap" />
+          </StackPanel>
+        </Grid>
+
+        <Border Classes="card">
+          <StackPanel Spacing="7">
+            <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource ProfileImport.Name}" />
+            <TextBox x:Name="ImportNameBox" TextChanged="ImportNameBox_TextChanged" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="22" RowSpacing="10">
+            <StackPanel Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource ProfileImport.Format}" />
+              <TextBlock x:Name="FormatText" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource ProfileImport.ExportedWith}" />
+              <TextBlock x:Name="VersionText" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource ProfileImport.Mods}" />
+              <TextBlock x:Name="ModsText" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource ProfileImport.Configs}" />
+              <TextBlock x:Name="ConfigsText" />
+            </StackPanel>
+            <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource ProfileImport.ExportedAt}" />
+              <TextBlock x:Name="ExportedAtText" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border x:Name="MissingPanel" Classes="card" BorderBrush="{DynamicResource Brush.Warning}" IsVisible="False">
+          <StackPanel Spacing="5">
+            <TextBlock FontWeight="SemiBold" Text="{DynamicResource ProfileImport.MissingTitle}" />
+            <TextBlock x:Name="MissingText" Classes="secondary" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="10">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="section" Text="{DynamicResource ProfileImport.ModList}" />
+              <TextBlock x:Name="MatchSummaryText" Grid.Column="1" Classes="secondary" FontSize="11" />
+            </Grid>
+            <ScrollViewer Height="240" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel x:Name="ModList" Spacing="6" />
+            </ScrollViewer>
+          </StackPanel>
+        </Border>
+
+        <TextBlock Classes="secondary" Text="{DynamicResource ProfileImport.NoBinaries}" TextWrapping="Wrap" FontSize="10" />
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border Grid.Row="1" Background="{DynamicResource Brush.Sidebar}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" Padding="22,14">
+      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+        <TextBlock x:Name="StatusText" Classes="secondary" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Classes="secondary" Click="Cancel_Click">
+          <TextBlock Text="{DynamicResource Common.Cancel}" />
+        </Button>
+        <Button x:Name="ImportButton" Grid.Column="2" Classes="primary" Click="Import_Click" MinWidth="110">
+          <TextBlock Text="{DynamicResource ProfileImport.Import}" />
+        </Button>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

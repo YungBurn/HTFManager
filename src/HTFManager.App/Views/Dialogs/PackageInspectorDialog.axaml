@@ -1,0 +1,110 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="HTFManager.App.Views.Dialogs.PackageInspectorDialog"
+        Width="790" Height="760" MinWidth="720" MinHeight="650"
+        CanResize="True" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Brush.Window}"
+        Title="HTF Manager">
+  <Grid RowDefinitions="*,Auto">
+    <ScrollViewer>
+      <StackPanel Margin="26" Spacing="16">
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+          <Border Width="52" Height="52" CornerRadius="12" Background="{DynamicResource Brush.Elevated}">
+            <PathIcon Data="{StaticResource Icon.Package}" Width="22" Height="22"
+                      Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+            <TextBlock x:Name="PackageNameText" FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="PackageAuthorText" Classes="secondary" />
+          </StackPanel>
+          <Border Grid.Column="2" Classes="badge" VerticalAlignment="Center">
+            <TextBlock x:Name="RiskText" Classes="badgeText" FontWeight="SemiBold" />
+          </Border>
+        </Grid>
+
+        <TextBlock x:Name="DescriptionText" Classes="secondary" TextWrapping="Wrap" MaxHeight="58" />
+
+        <Border Classes="card">
+          <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="22" RowSpacing="10">
+            <StackPanel Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource Inspector.Version}" />
+              <TextBlock x:Name="VersionText" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource Inspector.Loader}" />
+              <TextBlock x:Name="LoaderText" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource Inspector.Type}" />
+              <TextBlock x:Name="ComponentText" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource Inspector.Source}" />
+              <TextBlock x:Name="SourceText" />
+            </StackPanel>
+            <StackPanel Grid.Row="2" Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource Inspector.Target}" />
+              <TextBlock x:Name="TargetText" />
+            </StackPanel>
+            <StackPanel Grid.Row="2" Grid.Column="1" Spacing="2">
+              <TextBlock Classes="secondary" FontSize="10" Text="{DynamicResource Inspector.PackageSize}" />
+              <TextBlock x:Name="SizeText" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border x:Name="MissingLoaderPanel" Classes="card" BorderBrush="{DynamicResource Brush.Warning}" IsVisible="False">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+            <StackPanel Spacing="4">
+              <TextBlock FontWeight="SemiBold" Text="{DynamicResource Inspector.LoaderRequired}" />
+              <TextBlock x:Name="MissingLoaderText" Classes="secondary" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button x:Name="InstallLoaderButton" Grid.Column="1" Classes="primary" Click="InstallLoader_Click" VerticalAlignment="Center">
+              <TextBlock Text="{DynamicResource Inspector.InstallLoader}" />
+            </Button>
+          </Grid>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="10">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="section" Text="{DynamicResource Inspector.Files}" />
+              <TextBlock x:Name="FileCountText" Grid.Column="1" Classes="secondary" FontSize="11" />
+            </Grid>
+            <ScrollViewer Height="155" VerticalScrollBarVisibility="Auto">
+              <StackPanel x:Name="FilesList" Spacing="5" />
+            </ScrollViewer>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="10">
+            <TextBlock Classes="section" Text="{DynamicResource Inspector.Dependencies}" />
+            <ScrollViewer Height="105" VerticalScrollBarVisibility="Auto">
+              <StackPanel x:Name="DependenciesList" Spacing="5" />
+            </ScrollViewer>
+          </StackPanel>
+        </Border>
+
+        <Border x:Name="IssuesPanel" Classes="card" IsVisible="False">
+          <StackPanel Spacing="10">
+            <TextBlock Classes="section" Text="{DynamicResource Inspector.Issues}" />
+            <StackPanel x:Name="IssuesList" Spacing="6" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border Grid.Row="1" Background="{DynamicResource Brush.Sidebar}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" Padding="22,14">
+      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+        <TextBlock x:Name="ModeText" Classes="secondary" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Classes="secondary" Click="Cancel_Click">
+          <TextBlock Text="{DynamicResource Common.Cancel}" />
+        </Button>
+        <Button x:Name="InstallButton" Grid.Column="2" Classes="primary" Click="Install_Click" MinWidth="110">
+          <TextBlock x:Name="InstallButtonText" Text="{DynamicResource Common.Install}" />
+        </Button>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

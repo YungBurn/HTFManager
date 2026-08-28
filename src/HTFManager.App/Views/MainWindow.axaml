@@ -1,0 +1,105 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:panels="using:HTFManager.App.Views.Panels"
+        x:Class="HTFManager.App.Views.MainWindow"
+        Title="HTF Manager"
+        Width="1360" Height="820"
+        MinWidth="1100" MinHeight="700"
+        WindowStartupLocation="CenterScreen">
+  <Grid RowDefinitions="*,28" ColumnDefinitions="220,*,300">
+    <!-- Left navigation -->
+    <Border Grid.Row="0" Grid.Column="0"
+            Background="{DynamicResource Brush.Sidebar}"
+            BorderBrush="{DynamicResource Brush.Border}"
+            BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="92,*,Auto">
+        <StackPanel Margin="20,22,16,12" Spacing="2">
+          <TextBlock Text="HTF" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Brush.Primary}" />
+          <TextBlock Text="MANAGER" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" LetterSpacing="1.8" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Margin="10,4" Spacing="3">
+          <Button x:Name="HomeButton" Classes="nav" Tag="Home" Click="Navigate_Click">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{StaticResource Icon.Home}" Width="17" Height="17" />
+              <TextBlock Text="{DynamicResource Nav.Home}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="ModsButton" Classes="nav" Tag="Mods" Click="Navigate_Click">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{StaticResource Icon.Package}" Width="17" Height="17" />
+              <TextBlock Text="{DynamicResource Nav.Mods}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="DiscoverButton" Classes="nav" Tag="Discover" Click="Navigate_Click">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{StaticResource Icon.Compass}" Width="17" Height="17" />
+              <TextBlock Text="{DynamicResource Nav.Discover}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="ProfilesButton" Classes="nav" Tag="Profiles" Click="Navigate_Click">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{StaticResource Icon.Layers}" Width="17" Height="17" />
+              <TextBlock Text="{DynamicResource Nav.Profiles}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="ConfigurationButton" Classes="nav" Tag="Configuration" Click="Navigate_Click">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{StaticResource Icon.Config}" Width="17" Height="17" />
+              <TextBlock Text="{DynamicResource Nav.Configuration}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="ToolsButton" Classes="nav" Tag="Tools" Click="Navigate_Click">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{StaticResource Icon.Tools}" Width="17" Height="17" />
+              <TextBlock Text="{DynamicResource Nav.Tools}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Margin="10,8,10,14" Spacing="10">
+          <Button x:Name="SettingsButton" Classes="nav" Tag="Settings" Click="Navigate_Click">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{StaticResource Icon.Settings}" Width="17" Height="17" />
+              <TextBlock Text="{DynamicResource Nav.Settings}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <TextBlock Margin="14,0" Text="v0.3.5.1" FontSize="11" Foreground="{DynamicResource Brush.TextSecondary}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Main workspace -->
+    <Border Grid.Row="0" Grid.Column="1" Background="{DynamicResource Brush.Main}">
+      <ContentControl x:Name="PageHost" />
+    </Border>
+
+    <!-- Persistent right control panel -->
+    <panels:GameControlPanel Grid.Row="0" Grid.Column="2" />
+
+    <!-- Global file drop overlay -->
+    <Border x:Name="DropOverlay" Grid.Row="0" Grid.ColumnSpan="3" ZIndex="50"
+            IsVisible="False" IsHitTestVisible="False"
+            Background="#E60B1016" BorderBrush="{DynamicResource Brush.Primary}" BorderThickness="2"
+            Margin="14" CornerRadius="14">
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+        <PathIcon Data="{StaticResource Icon.Download}" Width="42" Height="42" Foreground="{DynamicResource Brush.Primary}" />
+        <TextBlock Text="{DynamicResource Drop.Title}" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" />
+        <TextBlock Text="{DynamicResource Drop.Subtitle}" Classes="secondary" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center" />
+      </StackPanel>
+    </Border>
+
+    <!-- Status bar -->
+    <Border Grid.Row="1" Grid.ColumnSpan="3"
+            Background="{DynamicResource Brush.Sidebar}"
+            BorderBrush="{DynamicResource Brush.Border}"
+            BorderThickness="0,1,0,0">
+      <Grid ColumnDefinitions="Auto,*" Margin="12,0">
+        <Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="{DynamicResource Brush.Success}" VerticalAlignment="Center" />
+        <TextBlock x:Name="StatusText" Grid.Column="1" Margin="8,0,0,0"
+                   Text="{DynamicResource Status.Ready}" FontSize="11"
+                   Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

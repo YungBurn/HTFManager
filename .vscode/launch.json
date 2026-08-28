@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "HTF Manager",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "HTF: Build",
+      "program": "${workspaceFolder}/src/HTFManager.App/bin/Debug/net10.0/HTFManager.dll",
+      "cwd": "${workspaceFolder}/src/HTFManager.App",
+      "console": "internalConsole",
+      "stopAtEntry": false
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="HTFManager.App.Views.Profiles.ProfilesView">
+  <Grid RowDefinitions="Auto,Auto,*" Margin="30,28">
+    <StackPanel Spacing="5">
+      <TextBlock Classes="h1" Text="{DynamicResource Profiles.Title}" />
+      <TextBlock Classes="secondary" Text="{DynamicResource Profiles.Subtitle}" />
+    </StackPanel>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10" Margin="0,20,0,12" MaxWidth="820" HorizontalAlignment="Stretch">
+      <TextBox x:Name="ProfileNameBox" PlaceholderText="{DynamicResource Profiles.Name}" />
+      <CheckBox x:Name="CaptureConfigSnapshotCheck" Grid.Column="1" IsChecked="True" VerticalAlignment="Center">
+        <TextBlock Text="{DynamicResource Profiles.CaptureConfigOnSave}" FontSize="11" />
+      </CheckBox>
+      <Button Grid.Column="2" Classes="primary" Click="SaveProfile_Click">
+        <TextBlock Text="{DynamicResource Profiles.SaveCurrent}" />
+      </Button>
+      <Button Grid.Column="3" Classes="secondary" Click="ImportProfile_Click">
+        <TextBlock Text="{DynamicResource Profiles.Import}" />
+      </Button>
+    </Grid>
+
+    <Border Grid.Row="2" Classes="card" Height="540" MaxWidth="820" HorizontalAlignment="Stretch" Padding="10">
+      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel x:Name="ProfileList" Spacing="8" />
+      </ScrollViewer>
+    </Border>
+  </Grid>
+</UserControl>

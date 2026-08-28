@@ -1,0 +1,90 @@
+# HTF Manager v0.3.5.1
+
+A lightweight, game-specific Mod Manager and launcher for **How to Fish (渔力全开)**.
+
+HTF Manager is built with **.NET 10**, **C#**, and **Avalonia 12**. It is designed around safe, reversible Mod management instead of directly modifying game assemblies.
+
+## Current capabilities
+
+- Detect the Steam installation of How to Fish.
+- Detect and manage BepInEx 5 and MelonLoader environments.
+- Install local DLL/ZIP Mods through Package Inspector and staging.
+- Browse and install supported Thunderstore packages.
+- Track managed Mod ownership separately from external/manual Mods.
+- Enable, disable, update, and uninstall managed Mods safely.
+- Inspect dependencies, destination paths, conflicts, and package risk before installation.
+- Automatically set up supported Mod loaders with validation, backup, rollback, and ownership tracking.
+- Edit BepInEx and MelonLoader configuration through the Configuration Center.
+- Provide reviewed Chinese mappings for known loader configuration without AI/forced translation of unknown third-party settings.
+- Maintain profiles containing Mod enabled/disabled state.
+- Save optional per-profile Mod configuration snapshots with recovery and rollback.
+- Export and import portable `.htfprofile` packages without redistributing Mod binaries or game files.
+- Detect missing or version-mismatched Mods when importing a portable profile.
+
+## Safety model
+
+HTF Manager intentionally separates **managed** content from **external/manual** content. Unknown files are not silently taken over or deleted.
+
+Normal Mod installation must not overwrite the game executable, `UnityPlayer.dll`, managed game assemblies, BepInEx core files, or unknown bootstrap DLLs. Loader installation uses a separate validated transaction path. Configuration and profile operations create recovery data before overwriting tracked configuration files.
+
+Portable profiles contain references and optional configuration snapshots only. They do **not** bundle third-party Mod DLLs, Mod archives, BepInEx/MelonLoader binaries, or game files.
+
+## Requirements
+
+- Windows 10/11
+- .NET 10 SDK for development/building
+- How to Fish through Steam
+- BepInEx 5 and/or MelonLoader depending on the Mods being used
+
+Avalonia is currently pinned to **12.1.1**.
+
+## Build
+
+```powershell
+dotnet restore HTFManager.slnx
+dotnet build HTFManager.slnx
+```
+
+Run the desktop application:
+
+```powershell
+dotnet run --project .\src\HTFManager.App\HTFManager.App.csproj
+```
+
+The `main` branch is also checked by GitHub Actions using .NET 10 on Windows.
+
+## Project structure
+
+```text
+src/
+├─ HTFManager.App/             Avalonia UI, localization and composition
+├─ HTFManager.Core/            Models and interfaces
+└─ HTFManager.Infrastructure/  Game, loader, Mod, profile and storage services
+
+docs/                          Architecture and feature design notes
+build/                         Local development/release helper scripts
+```
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for current subsystem boundaries and safety invariants.
+
+For continuing development in another ChatGPT session, start with [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) and [`PROJECT_STATE.json`](PROJECT_STATE.json).
+
+## Local application data
+
+HTF Manager stores its own state outside the game directory:
+
+```text
+%LOCALAPPDATA%\HTFManager\
+```
+
+This includes settings, profiles, Mod/loader ownership records, caches, configuration backups, profile snapshots, and recovery data. Local runtime data is not intended to be committed to this repository.
+
+## Current baseline
+
+**v0.3.5.1** is the current verified development baseline. It contains the v0.3.5 Portable Profiles feature plus the compile hotfix documented in [`PATCH_NOTES_v0.3.5.1.md`](PATCH_NOTES_v0.3.5.1.md).
+
+The next planned development milestone is **v0.3.6 — Profile Restore Assistant**, which will use portable-profile metadata to resolve and restore missing supported Mods through the existing Package Inspector/install pipeline.
+
+## License
+
+MIT. See [`LICENSE`](LICENSE).
