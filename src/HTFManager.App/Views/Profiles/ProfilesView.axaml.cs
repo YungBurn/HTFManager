@@ -461,12 +461,24 @@ public partial class ProfilesView : UserControl
             FontWeight = FontWeight.SemiBold,
             TextTrimming = TextTrimming.CharacterEllipsis
         };
+        var healthItem = mod is null
+            ? null
+            : App.Services.GetProfileHealth(profile).Items.FirstOrDefault(item =>
+                item.InstalledMod?.Id.Equals(modId, StringComparison.OrdinalIgnoreCase) == true ||
+                item.Expectation.ResolvedModId?.Equals(modId, StringComparison.OrdinalIgnoreCase) == true);
+        var versionMismatch = healthItem?.Status == ProfileHealthStatus.VersionMismatch;
+        var versionText = versionMismatch && healthItem is not null && mod is not null
+            ? string.Format(
+                App.Services.Localization.Get("Profiles.ExpectedInstalled"),
+                NormalizeVersion(healthItem.Expectation.Requirement.Version),
+                NormalizeVersion(mod.Version))
+            : mod?.Version ?? "—";
         var meta = new TextBlock
         {
             Text = mod is null
                 ? App.Services.Localization.Get("Profiles.ModMissing")
-                : $"{LoaderLabel(mod.Loader)}  ·  {ComponentLabel(mod.Component)}  ·  {mod.Version}",
-            Foreground = ResourceBrush(mod is null ? "Brush.Warning" : "Brush.TextSecondary"),
+                : $"{LoaderLabel(mod.Loader)}  ·  {ComponentLabel(mod.Component)}  ·  {versionText}",
+            Foreground = ResourceBrush(mod is null || versionMismatch ? "Brush.Warning" : "Brush.TextSecondary"),
             FontSize = 10,
             TextTrimming = TextTrimming.CharacterEllipsis
         };
@@ -747,6 +759,9 @@ public partial class ProfilesView : UserControl
         ModLoaderKind.MelonLoader => "MelonLoader",
         _ => "Unknown"
     };
+
+    private static string NormalizeVersion(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "—" : value.Trim();
 
     private IBrush? ResourceBrush(string key) => this.FindResource(key) as IBrush;
 

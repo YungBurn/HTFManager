@@ -57,15 +57,17 @@ public partial class ProfileBundleImportDialog : Window
     {
         var health = item.Health;
         var requirement = health.Expectation.Requirement;
-        var status = health.Status == ProfileHealthStatus.Missing && item.BundledPayload is not null
-            ? App.Services.Localization.Get("BundleImport.BundledExact")
-            : App.Services.Localization.Get(health.Status switch
-            {
-                ProfileHealthStatus.Healthy => "Health.Healthy",
-                ProfileHealthStatus.Missing => "Health.Missing",
-                ProfileHealthStatus.VersionMismatch => "Health.VersionMismatch",
-                _ => "Health.Uncertain"
-            });
+        var status = health.Status switch
+        {
+            ProfileHealthStatus.Missing when item.BundledPayload is not null
+                => App.Services.Localization.Get("BundleImport.BundledExact"),
+            ProfileHealthStatus.VersionMismatch when item.BundledPayload is not null
+                => App.Services.Localization.Get("BundleImport.VersionMismatchBundledExact"),
+            ProfileHealthStatus.Healthy => App.Services.Localization.Get("Health.Healthy"),
+            ProfileHealthStatus.Missing => App.Services.Localization.Get("Health.Missing"),
+            ProfileHealthStatus.VersionMismatch => App.Services.Localization.Get("Health.VersionMismatch"),
+            _ => App.Services.Localization.Get("Health.Uncertain")
+        };
         var brush = ResourceBrush(health.Status switch
         {
             ProfileHealthStatus.Healthy => "Brush.Success",

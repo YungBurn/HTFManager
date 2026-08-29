@@ -8,4 +8,5 @@ public sealed class PreparedModPackage
     public RemoteModPackage? RemotePackage { get; init; }
     public string? TemporaryDirectory { get; init; }
     public bool IsVersionReconciliation { get; init; }
+    public ProfileVersionReconciliationSource ReconciliationSource { get; init; } = ProfileVersionReconciliationSource.None;
 }

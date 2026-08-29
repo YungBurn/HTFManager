@@ -8,7 +8,7 @@ Example:
 {
   "schemaVersion": 1,
   "channel": "stable",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "rid": "win-x64",
   "asset": "HTFManager.exe",
   "size": 123456789,
@@ -23,25 +23,57 @@ Example:
 - `channel`: currently exactly `stable`.
 - `version`: normalized application version, without a leading `v`.
 - `rid`: currently `win-x64`.
-- `asset`: a filename only; v1 uses `HTFManager.exe`.
+- `asset`: v1 requires exactly `HTFManager.exe`.
 - `size`: expected executable length in bytes, greater than zero.
 - `sha256`: 64 hexadecimal characters for the executable contents.
 - `publishedAt`: UTC timestamp generated with the release assets.
 
-## Validation
+## Release discovery validation
 
 Before exposing an update as installable, HTF Manager verifies that:
 
-1. GitHub's latest tag parses as a supported application version and is newer than the running version.
-2. the release contains exactly-addressable `update-manifest.json` and executable assets;
-3. manifest schema/channel/RID are supported;
-4. manifest version matches the GitHub release tag;
-5. the asset name is a simple filename and exists on the release;
-6. manifest asset size matches GitHub metadata when available;
-7. the downloaded executable length and SHA-256 match the manifest.
+1. GitHub's latest tag parses as a supported application version and is strictly newer than the running version;
+2. the release contains `update-manifest.json` and the expected executable asset;
+3. manifest and executable download URLs are HTTPS;
+4. manifest schema/channel/RID are supported;
+5. manifest version matches the GitHub release tag;
+6. manifest asset is exactly `HTFManager.exe`;
+7. manifest SHA-256 is structurally valid;
+8. manifest size is greater than zero;
+9. manifest asset size matches GitHub release metadata when GitHub reports a size.
 
-A failed validation produces an update error and never starts replacement.
+A same-version or older latest release is considered `UpToDate`, not an installable update.
+
+## Download validation
+
+The executable is downloaded into a unique `.download-*` temporary file.
+
+During download HTF Manager:
+
+1. rejects a reported `Content-Length` that differs from the manifest size;
+2. enforces the manifest size as a streaming upper bound even when the server does not provide `Content-Length`;
+3. requires the final file length to equal the manifest size exactly;
+4. computes SHA-256 and requires an exact match;
+5. moves the file into the stable staging path only after validation succeeds.
+
+Partial `.download-*` files are removed after failure or cancellation. A previously staged executable can be reused only after its length and SHA-256 are recomputed and still match the current manifest.
+
+## Apply-time validation
+
+`Restart and Update` revalidates the staged executable immediately before creating the temporary Update Host.
+
+The Update Host independently verifies:
+
+- expected executable size;
+- expected SHA-256;
+- replacement target availability.
+
+After replacement, the new executable must complete application initialization and write a private startup acknowledgement. The old `.old` backup is removed only after that acknowledgement is observed.
+
+If the new executable exits before acknowledgement or the acknowledgement times out, the Update Host attempts to stop the new process, restore the old executable, and relaunch the previous version.
 
 ## Trust boundary
 
-The manifest and executable are both retrieved over HTTPS from GitHub Releases, then linked by SHA-256. This is an integrity mechanism. v1 does not claim publisher authenticity equivalent to Windows Authenticode signing; signed release verification is a later hardening target.
+The manifest and executable are both retrieved over HTTPS from GitHub Releases and linked by size plus SHA-256. This is an integrity mechanism and guards against accidental/mismatched release assets and corrupted downloads.
+
+Manifest v1 does **not** claim publisher authenticity equivalent to Windows Authenticode. Authenticode signing and expected-publisher enforcement are separate hardening layers and are not required by the v1 schema.

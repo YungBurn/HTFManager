@@ -287,3 +287,17 @@ v0.3.8 introduces a supported Windows release artifact built as `.NET 10`, `win-
 The update subsystem never modifies `%LOCALAPPDATA%\HTFManager` profiles/package history except its own `updates` staging directory. v0.3.8 does not include UAC elevation, forced updates, delta updates, prerelease channels, installers or Authenticode verification. Those are later distribution-hardening concerns.
 
 The canonical v0.3.8 scope is `docs/V0.3.8_SCOPE_LOCK.md`; the updater file contract is `docs/UPDATE_MANIFEST_V1.md`.
+
+## 16. v0.3.9 hardening — update acknowledgement and reconciliation provenance
+
+v0.3.9 keeps the v0.3.8 stable-release/update-manifest architecture but tightens each transition. `GitHubReleaseUpdateService` rejects same/older releases, validates HTTPS asset locations, requires the executable asset to be exactly `HTFManager.exe`, enforces the manifest size while streaming, removes partial download fragments, and only reuses an existing staged executable after rechecking size and SHA-256.
+
+The replacement transaction now has an explicit startup acknowledgement boundary. `WindowsApplicationUpdateApplier` verifies the staged file again and starts the temporary copy of the current executable as the Update Host. After the parent exits, the host verifies size/hash, moves the old executable to `.old`, installs the staged executable, and launches it with a private acknowledgement-file argument. `App.OnFrameworkInitializationCompleted` writes that acknowledgement only after the new application has initialized. The host deletes `.old` only after acknowledgement; early exit or timeout stops the attempted new process and restores/relaunches the previous executable.
+
+Because the Update Host is always copied from the version that initiates the update, this acknowledgement protocol first applies to updates **initiated by v0.3.9**. A `v0.3.8 → v0.3.9` production test still uses the v0.3.8 host implementation and therefore validates the original v0.3.8 replacement behavior, not the new acknowledgement boundary.
+
+This acknowledgement is intentionally local and temporary. It is not an update authorization token and does not replace release metadata validation. Its purpose is transactional rollback: a successful `Process.Start` alone is no longer treated as proof that the replacement application initialized successfully.
+
+Version reconciliation remains exact and user-controlled. v0.3.9 adds resolver provenance to `PreparedModPackage` so Package Inspector can distinguish an exact artifact obtained from the active bundle, retained artifact history, or Thunderstore without changing the package's logical source identity. Profile editor rows also expose `Expected` versus `Installed` when health reports `VersionMismatch`, avoiding accidental UI implication that the profile baseline mutated.
+
+Portable-bundle import keeps its existing counts and profile-first behavior. The missing-with-bundled-payload counter is labelled explicitly as such, while a mismatched installed Mod with an exact bundled payload receives a dedicated badge. Bundle presence still does not authorize installation; Package Inspector remains the confirmation boundary.

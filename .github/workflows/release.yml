@@ -63,7 +63,7 @@ jobs:
           if (-not (gh release view $tag 2>$null)) {
             $notesFile = "PATCH_NOTES_$tag.md"
             if (Test-Path $notesFile) {
-              gh release create $tag --verify-tag --title "HTF Manager $tag — Version Reconciliation & Application Delivery" --notes-file $notesFile
+              gh release create $tag --verify-tag --title "HTF Manager $tag" --notes-file $notesFile
             } else {
               gh release create $tag --verify-tag --title "HTF Manager $tag" --generate-notes
             }

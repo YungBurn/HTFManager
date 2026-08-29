@@ -110,13 +110,24 @@
             <CheckBox x:Name="AutoUpdateCheck" Grid.Column="1" Click="UpdateSetting_Click" VerticalAlignment="Center" />
           </Grid>
 
-          <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+          <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
             <TextBlock Text="{DynamicResource Settings.CurrentVersion}" Classes="secondary" />
             <TextBlock x:Name="CurrentVersionText" Grid.Column="1" FontWeight="SemiBold" />
             <TextBlock Grid.Column="2" Text="{DynamicResource Settings.LatestVersion}" Classes="secondary" />
             <TextBlock x:Name="LatestVersionText" Grid.Column="3" FontWeight="SemiBold" />
-            <TextBlock Grid.Row="1" Text="{DynamicResource Settings.LastChecked}" Classes="secondary" />
-            <TextBlock x:Name="LastCheckedText" Grid.Row="1" Grid.Column="1" />
+
+            <TextBlock Grid.Row="1" Text="{DynamicResource Settings.UpdateChannel}" Classes="secondary" />
+            <TextBlock x:Name="UpdateChannelText" Grid.Row="1" Grid.Column="1" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Text="{DynamicResource Settings.PublishedAt}" Classes="secondary" />
+            <TextBlock x:Name="PublishedAtText" Grid.Row="1" Grid.Column="3" />
+
+            <TextBlock Grid.Row="2" Text="{DynamicResource Settings.LastChecked}" Classes="secondary" />
+            <TextBlock x:Name="LastCheckedText" Grid.Row="2" Grid.Column="1" />
+            <TextBlock Grid.Row="2" Grid.Column="2" Text="{DynamicResource Settings.UpdateSize}" Classes="secondary" />
+            <TextBlock x:Name="UpdateSizeText" Grid.Row="2" Grid.Column="3" />
+
+            <TextBlock Grid.Row="3" Text="{DynamicResource Settings.Verification}" Classes="secondary" />
+            <TextBlock x:Name="VerificationText" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" TextWrapping="Wrap" />
           </Grid>
 
           <TextBlock x:Name="UpdateStatusText" Classes="secondary" TextWrapping="Wrap" />

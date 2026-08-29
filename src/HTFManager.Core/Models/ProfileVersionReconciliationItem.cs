@@ -16,10 +16,15 @@ public sealed class ProfileVersionReconciliationItem
                                           ProfileVersionReconciliationSource.Thunderstore or
                                           ProfileVersionReconciliationSource.CatalogRequired;
 
+    public bool InstalledSourceMatchesExpectation =>
+        Health.InstalledMod is not null &&
+        Health.InstalledMod.Source == Health.Expectation.Requirement.Source;
+
     public bool CanAcceptInstalled => Health.Status == ProfileHealthStatus.VersionMismatch &&
                                       Health.InstalledMod is not null &&
                                       !VersionUnknown(Health.InstalledMod.Version) &&
-                                      HasDeterministicIdentity(Health.Expectation.Requirement);
+                                      HasDeterministicIdentity(Health.Expectation.Requirement) &&
+                                      InstalledSourceMatchesExpectation;
 
     private static bool VersionUnknown(string? version)
         => string.IsNullOrWhiteSpace(version) || version.Trim() == "—";

@@ -13,8 +13,9 @@ internal static class Program
             return;
         }
 
+        var applicationArgs = UpdateHostMode.PrepareApplicationArguments(args);
         UpdateHostMode.CleanupStaleHosts();
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(applicationArgs);
     }
 
     public static AppBuilder BuildAvaloniaApp() =>

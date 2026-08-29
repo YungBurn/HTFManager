@@ -150,6 +150,23 @@ public partial class ProfileHealthDialog : Window
             Margin = new Thickness(0, 3, 0, 0)
         });
 
+        if (reconciliation is not null &&
+            health.InstalledMod is not null &&
+            !reconciliation.InstalledSourceMatchesExpectation)
+        {
+            labels.Children.Add(new TextBlock
+            {
+                Text = string.Format(
+                    App.Services.Localization.Get("Health.AcceptSourceMismatch"),
+                    SourceLabel(health.Expectation.Requirement.Source),
+                    SourceLabel(health.InstalledMod.Source)),
+                Foreground = ResourceBrush("Brush.TextSecondary"),
+                FontSize = 10,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 3, 0, 0)
+            });
+        }
+
         var actions = new StackPanel
         {
             Orientation = Avalonia.Layout.Orientation.Horizontal,
@@ -258,6 +275,16 @@ public partial class ProfileHealthDialog : Window
     }
 
     private void Close_Click(object? sender, RoutedEventArgs e) => Close();
+
+    private string SourceLabel(ModSourceType source)
+        => App.Services.Localization.Get(source switch
+        {
+            ModSourceType.Thunderstore => "Mods.Source.Thunderstore",
+            ModSourceType.LocalDll => "Mods.Source.LocalDll",
+            ModSourceType.Development => "Mods.Source.Development",
+            ModSourceType.External => "Mods.Source.External",
+            _ => "Mods.Source.LocalArchive"
+        });
 
     private string StatusLabel(ProfileHealthStatus status)
         => App.Services.Localization.Get(status switch
