@@ -469,15 +469,15 @@ HTF Manager release binaries are intended to be built from the public source rep
 
 ### Team roles
 
-Project roles are currently:
+- **Authors / Committers:** YungBurn
+- **Reviewers:** YungBurn
+- **Approvers:** YungBurn
 
-- **Committers:** HTF Manager project maintainer(s)
-- **Reviewers:** HTF Manager project maintainer(s)
-- **Approvers:** HTF Manager project owner
+Changes intended for a release are reviewed through the public Git repository
+and pull-request history.
 
-Changes intended for a release are reviewed through the public Git repository and pull-request history.
-
-Release signing requests using the SignPath Foundation certificate require explicit approval before signing.
+Every release signing request using the SignPath Foundation certificate
+requires explicit manual approval before signing.
 
 ### Build integrity
 
@@ -526,6 +526,9 @@ Automatic update checks can be disabled in HTF Manager settings.
 Profile data, configuration snapshots, managed-package history, ownership records, recovery data, and game files are not intended to be uploaded as part of ordinary package browsing or application-update operations.
 
 Local application state remains stored on the user's machine unless the user explicitly performs an export/share operation.
+
+HTF Manager will not transfer information to other networked systems unless
+specifically requested by the user or required by a user-enabled feature.
 
 ---
 
