@@ -8,6 +8,7 @@ public sealed class PackageInspectionResult
     public string Author { get; init; } = "Unknown";
     public string Description { get; init; } = "";
     public string? PackageKey { get; init; }
+    public string? IntrinsicId { get; init; }
     public ModSourceType Source { get; init; } = ModSourceType.LocalArchive;
     public ModPackageKind Kind { get; init; } = ModPackageKind.Unknown;
     public ModLoaderKind Loader { get; init; } = ModLoaderKind.Unknown;

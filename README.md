@@ -1,4 +1,4 @@
-# HTF Manager v0.3.6
+# HTF Manager v0.3.7
 
 A lightweight, game-specific Mod Manager and launcher for **How to Fish (渔力全开)**.
 
@@ -18,9 +18,12 @@ HTF Manager is built with **.NET 10**, **C#**, and **Avalonia 12**. It is design
 - Provide reviewed Chinese mappings for known loader configuration without AI/forced translation of unknown third-party settings.
 - Maintain profiles containing Mod enabled/disabled state.
 - Save optional per-profile Mod configuration snapshots with recovery and rollback.
-- Export and import portable `.htfprofile` packages without redistributing Mod binaries or game files.
-- Detect missing or version-mismatched Mods when importing a portable profile.
-- Guide restoration of missing Thunderstore requirements through Profile Restore Assistant and the existing Package Inspector/install pipeline.
+- Export/import lightweight `.htfprofile` packages for metadata-only profile sharing.
+- Export/import full `.htfbundle` portable profile bundles containing only eligible, verified HTF-managed Mod source artifacts.
+- Preserve profile expected Mod identity/version metadata and report `Healthy`, `Missing`, `VersionMismatch`, and `IdentityUncertain` health states.
+- Restore missing bundled Mods without reinstalling Mods that already satisfy the profile.
+- Guide restoration through the existing Package Inspector and transactional install pipeline; no bundle payload is installed silently.
+- Recognize deterministic local BepInEx intrinsic identities (for example a `BepInPlugin` GUID) so eligible local Mods can participate in full sharing without pretending to be Thunderstore packages.
 
 ## Safety model
 
@@ -28,7 +31,7 @@ HTF Manager intentionally separates **managed** content from **external/manual**
 
 Normal Mod installation must not overwrite the game executable, `UnityPlayer.dll`, managed game assemblies, BepInEx core files, or unknown bootstrap DLLs. Loader installation uses a separate validated transaction path. Configuration and profile operations create recovery data before overwriting tracked configuration files.
 
-Portable profiles contain references and optional configuration snapshots only. They do **not** bundle third-party Mod DLLs, Mod archives, BepInEx/MelonLoader binaries, or game files.
+Lightweight `.htfprofile` files contain references and optional configuration snapshots only. Full `.htfbundle` files may additionally contain verified HTF-managed Mod source artifacts when the profile has an exact expected version and a deterministic identity. External/unmanaged Mods, loader binaries, game files, and ambiguous local packages are never bundled automatically. Users remain responsible for third-party redistribution permissions.
 
 ## Requirements
 
@@ -62,11 +65,14 @@ src/
 ├─ HTFManager.Core/            Models and interfaces
 └─ HTFManager.Infrastructure/  Game, loader, Mod, profile and storage services
 
+tests/                         Deterministic profile/bundle/security tests
 docs/                          Architecture and feature design notes
 build/                         Local development/release helper scripts
 ```
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for current subsystem boundaries and safety invariants.
+
+For continuing development in another ChatGPT session, start with [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) and [`PROJECT_STATE.json`](PROJECT_STATE.json).
 
 ## Local application data
 
@@ -80,9 +86,13 @@ This includes settings, profiles, Mod/loader ownership records, caches, configur
 
 ## Current baseline
 
-**v0.3.6** is the current verified development baseline. It adds the Profile Restore Assistant on top of portable profiles: unresolved Thunderstore requirements are planned by exact `PackageKey`, the requested version is preferred, fallbacks require explicit acknowledgement, and every install still passes through the existing Package Inspector and transactional install pipeline. See [`PATCH_NOTES_v0.3.6.md`](PATCH_NOTES_v0.3.6.md) and [`docs/V0.3.6_PROFILE_RESTORE_ASSISTANT.md`](docs/V0.3.6_PROFILE_RESTORE_ASSISTANT.md).
+**v0.3.7 — Portable Profile Bundle & Health** is the current release candidate. The final intrinsic-identity overlay must pass the normal Windows/.NET 10 release gate before merge/tag. It builds on the v0.3.6 Restore Assistant with durable expected-state metadata, read-only profile health, lightweight/full sharing, `.htfbundle` schema v1, verified artifact retention, profile-first bundle import, lazy payload extraction, and bundled missing-Mod restoration through the existing Package Inspector/install pipeline.
 
-The next planned development milestone is **v0.3.7 — Profile Health & Version Reconciliation**. It will preserve expected Mod metadata for resolved profile members, detect version drift that v0.3.6 intentionally treats as a match, and provide a safe path to reconcile supported Thunderstore versions without weakening Package Inspector or ownership rules.
+Full sharing is deliberately conservative. A Mod is automatically bundled only when HTF Manager can prove a managed source artifact belongs to the exact profile expectation. Thunderstore `PackageKey` remains the strongest provider identity; local BepInEx packages can use a deterministic intrinsic plugin identity such as `com.moddle.howtofish.truedot`. Package identity is never fabricated from a filename.
+
+Version mismatch detection is included, but **v0.3.7 does not automatically replace, downgrade, or upgrade a mismatched installed Mod**. That explicit reconciliation workflow is the next planned milestone: **v0.3.8 — Profile Version Reconciliation**.
+
+See [`PATCH_NOTES_v0.3.7.md`](PATCH_NOTES_v0.3.7.md), [`docs/V0.3.7_PORTABLE_PROFILE_BUNDLE_AND_HEALTH.md`](docs/V0.3.7_PORTABLE_PROFILE_BUNDLE_AND_HEALTH.md), and [`docs/HTFBUNDLE_SCHEMA_V1.md`](docs/HTFBUNDLE_SCHEMA_V1.md).
 
 ## License
 

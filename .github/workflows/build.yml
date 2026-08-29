@@ -27,3 +27,6 @@ jobs:
 
       - name: Build
         run: dotnet build HTFManager.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --project tests/HTFManager.Tests/HTFManager.Tests.csproj --configuration Release --no-build --no-restore

@@ -6,9 +6,9 @@
     <Nullable>enable</Nullable>
     <AssemblyName>HTFManager</AssemblyName>
     <RootNamespace>HTFManager.App</RootNamespace>
-    <Version>0.3.6</Version>
-    <FileVersion>0.3.6.0</FileVersion>
-    <InformationalVersion>0.3.6</InformationalVersion>
+    <Version>0.3.7</Version>
+    <FileVersion>0.3.7.0</FileVersion>
+    <InformationalVersion>0.3.7</InformationalVersion>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
   </PropertyGroup>
 

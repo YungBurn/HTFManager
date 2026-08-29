@@ -1,4 +1,4 @@
-# Publishing HTF Manager v0.3.6 to GitHub
+# Publishing HTF Manager v0.3.7 to GitHub
 
 Repository:
 
@@ -6,31 +6,46 @@ Repository:
 https://github.com/YungBurn/HTFManager
 ```
 
-Current development branch:
+Development branch:
 
 ```text
-feature/v0.3.6-profile-restore-assistant
+feature/v0.3.7-profile-health-version-reconciliation
 ```
 
-The recommended release workflow is **feature branch → GitHub Pull Request → main → annotated tag**. Do not force-push `main`.
+Release name:
 
-## 1. Apply the v0.3.6 release-state files
+```text
+HTF Manager v0.3.7 — Portable Profile Bundle & Health
+```
 
-Copy the GitHub release/finalization file package into the repository root so `VERSION`, release notes, handoff documents, architecture metadata, visible app version, and export metadata all report v0.3.6.
+The release workflow is **local validation → feature commits → push → Pull Request → green Actions → main → annotated tag/release**. Do not force-push `main`.
 
-## 2. Re-run the verified build
+## 1. Final local release gate
 
-From the repository root:
+After applying the final v0.3.7 release overlay, run:
 
 ```powershell
 dotnet restore HTFManager.slnx
 dotnet build HTFManager.slnx --configuration Release --no-restore
+dotnet test --project .\tests\HTFManager.Tests\HTFManager.Tests.csproj --configuration Release --no-build --no-restore
 dotnet run --project .\src\HTFManager.App\HTFManager.App.csproj
 ```
 
-The currently known baseline emits three non-blocking Avalonia `AVLN3001` warnings for `LoaderSetupDialog`, `PackageInspectorDialog`, and `ProfileImportDialog`. A successful build and application startup remain required.
+Expected automated suite after the local-identity enhancement: **54 passing tests**.
 
-## 3. Review exactly what will be committed
+Manual release checks should include:
+
+- lightweight `.htfprofile` export/import still works;
+- Full share produces `.htfbundle`;
+- importing `.htfbundle` reads the embedded profile first and installs nothing automatically;
+- an already healthy Mod is not offered for duplicate installation;
+- a missing exact bundled Mod enters the existing Package Inspector only after explicit action;
+- `VersionMismatch` is detected but not automatically replaced;
+- a manifest-less managed BepInEx local package with a deterministic `BepInPlugin` GUID/version can be included in Full share;
+- an ambiguous/duplicate intrinsic identity is not automatically matched or bundled;
+- no loader/game/external unmanaged files are silently bundled.
+
+## 2. Review repository changes
 
 ```powershell
 git status --short
@@ -38,104 +53,91 @@ git diff --check
 git diff --stat
 ```
 
-Confirm that the changes do not include:
+Do not commit:
 
-- `bin/` or `obj/`;
-- publish output;
+- `bin/`, `obj/` or publish output;
+- local `.htfbundle`/`.htfprofile` test files;
+- downloaded third-party Mod archives/DLLs used for smoke testing;
 - game files;
-- downloaded Mod or loader binaries;
-- `%LOCALAPPDATA%\HTFManager` data;
-- personal test profiles/configuration;
-- cache/download directories.
+- `%LOCALAPPDATA%\HTFManager` runtime/cache data;
+- temporary patch/overlay ZIP files.
 
-## 4. Stage and commit v0.3.6
+## 3. Commit the local v0.3.7 work
+
+If Phase A/full implementation changes are still uncommitted, prefer a few meaningful commits rather than one giant implementation-history dump. For example:
 
 ```powershell
 git add .
 git diff --cached --check
-git status --short
-git commit -m "Add v0.3.6 Profile Restore Assistant"
+git commit -m "Add v0.3.7 portable profile bundle and health"
 ```
 
-Review `git status` after the commit; the working tree should be clean.
-
-## 5. Push the feature branch
+If the earlier foundation is already committed separately, the final identity/release closure can be:
 
 ```powershell
-git push -u origin feature/v0.3.6-profile-restore-assistant
+git add .
+git diff --cached --check
+git commit -m "Finalize v0.3.7 local Mod identity and release metadata"
 ```
 
-Do not push directly over `main` and do not use `--force`.
+The working tree should be clean before push.
 
-## 6. Open the Pull Request
+## 4. Push the feature branch
 
-On GitHub create a Pull Request:
+```powershell
+git push -u origin feature/v0.3.7-profile-health-version-reconciliation
+```
+
+No force push is required for normal local development unless the feature branch history was intentionally rebased. Never use a blind `--force`; use `--force-with-lease` only when a rebase actually requires it.
+
+## 5. Create the Pull Request
 
 ```text
 base:    main
-compare: feature/v0.3.6-profile-restore-assistant
+compare: feature/v0.3.7-profile-health-version-reconciliation
 ```
 
 Suggested title:
 
 ```text
-HTF Manager v0.3.6 — Profile Restore Assistant
+HTF Manager v0.3.7 — Portable Profile Bundle & Health
 ```
 
 Suggested summary:
 
 ```text
-- adds deterministic restore planning for missing portable-profile requirements
-- restores supported Thunderstore requirements through existing Package Inspector/install pipeline
-- requires explicit acknowledgement for version fallback
-- re-matches profiles after successful restoration
-- adds HTF Manager application/taskbar logo
-- promotes the verified development baseline to v0.3.6
+- preserves durable expected Mod identity/version state and adds read-only profile health
+- adds Lightweight (.htfprofile) and Full (.htfbundle) sharing
+- adds verified package-artifact bundling with profile-first import and lazy extraction
+- restores only genuinely missing exact bundled Mods through the existing Package Inspector/transactional installer
+- suppresses duplicate installs for already healthy requirements
+- detects VersionMismatch without automatic downgrade/upgrade
+- adds deterministic local BepInEx intrinsic identity so eligible managed local Mods can be bundled without fabricating a Thunderstore PackageKey
+- expands automated tests and promotes application/profile/bundle metadata to v0.3.7
 ```
 
-Wait for the GitHub Actions build to pass before merging.
+Wait for GitHub Actions to pass before merging.
 
-## 7. Merge to main
+## 6. Merge and tag
 
-Use the normal GitHub merge flow. After the PR is merged, synchronize local `main`:
+After the PR is green and merged:
 
 ```powershell
-git checkout main
+git switch main
 git pull --ff-only origin main
+git tag -a v0.3.7 -m "HTF Manager v0.3.7 - Portable Profile Bundle & Health"
+git push origin v0.3.7
 ```
 
-Confirm the release commit is present:
+Then create a GitHub Release using tag `v0.3.7` and `PATCH_NOTES_v0.3.7.md` as the release-note source.
+
+## 7. Start v0.3.8 only after v0.3.7 is released
 
 ```powershell
-git log --oneline --decorate -n 10
-```
-
-## 8. Tag v0.3.6
-
-Only tag after `main` contains the merged, green v0.3.6 build:
-
-```powershell
-git tag -a v0.3.6 -m "HTF Manager v0.3.6 - Profile Restore Assistant"
-git push origin v0.3.6
-```
-
-A GitHub Release can then be created from tag `v0.3.6`, using `PATCH_NOTES_v0.3.6.md` as the release-note source.
-
-## 9. Start v0.3.7 development
-
-After `main` and tag `v0.3.6` are confirmed:
-
-```powershell
-git checkout main
+git switch main
 git pull --ff-only origin main
-git checkout -b feature/v0.3.7-profile-health-version-reconciliation
-git push -u origin feature/v0.3.7-profile-health-version-reconciliation
+git switch -c feature/v0.3.8-profile-version-reconciliation
+git push -u origin feature/v0.3.8-profile-version-reconciliation
 ```
 
-The planned scope is documented in:
-
-```text
-docs/V0.3.7_PROFILE_HEALTH_AND_VERSION_RECONCILIATION.md
-```
-
-Keep the first v0.3.7 implementation patch focused on the expectation/health data model and read-only health calculation before adding repair UI or provider work.
+v0.3.8 owns explicit version reconciliation. Do not retroactively add downgrade/upgrade behavior to the v0.3.7 release branch.

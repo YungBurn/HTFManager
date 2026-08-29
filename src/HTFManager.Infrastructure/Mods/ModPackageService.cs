@@ -274,9 +274,10 @@ public sealed class ModPackageService : IModPackageService
         if (analysis.Loader == ModLoaderKind.MelonLoader && analysis.Component == ModComponentKind.Unknown)
             return Invalid("The DLL contains both MelonMod and MelonPlugin entry types and cannot be placed safely as a single file.");
 
-        var name = metadata?.Name ?? analysis.AssemblyName;
-        var version = metadata?.Version ?? analysis.Version;
+        var name = FirstKnown(metadata?.Name, analysis.DisplayName, analysis.AssemblyName);
+        var version = FirstKnownVersion(metadata?.Version, analysis.Version);
         var author = metadata?.Author ?? "Local";
+        var intrinsicId = FirstKnownOptional(metadata?.IntrinsicId, analysis.IntrinsicId);
         var fileName = Path.GetFileName(sourcePath);
         var folder = SafeName(name);
 
@@ -297,6 +298,7 @@ public sealed class ModPackageService : IModPackageService
             Author = author,
             Description = metadata?.Description ?? "",
             PackageKey = metadata?.PackageKey,
+            IntrinsicId = intrinsicId,
             Source = metadata?.Source ?? ModSourceType.LocalDll,
             Kind = kind,
             Loader = analysis.Loader,
@@ -326,10 +328,11 @@ public sealed class ModPackageService : IModPackageService
                 string.Equals(RemovePrefix(NormalizeArchivePath(e.FullName), prefix), "manifest.json", StringComparison.OrdinalIgnoreCase));
 
             var manifest = manifestEntry is null ? null : ReadManifest(manifestEntry);
-            var name = metadata?.Name ?? manifest?.Name ?? Path.GetFileNameWithoutExtension(sourcePath);
-            var version = metadata?.Version ?? manifest?.VersionNumber ?? "—";
+            var name = FirstKnown(metadata?.Name, manifest?.Name, Path.GetFileNameWithoutExtension(sourcePath));
+            var version = FirstKnownVersion(metadata?.Version, manifest?.VersionNumber);
             var description = metadata?.Description ?? manifest?.Description ?? "";
             var author = metadata?.Author ?? "Local";
+            var intrinsicId = FirstKnownOptional(metadata?.IntrinsicId);
             IReadOnlyList<string> dependencies = metadata?.Dependencies
                 ?? (IReadOnlyList<string>?)manifest?.Dependencies
                 ?? Array.Empty<string>();
@@ -360,6 +363,17 @@ public sealed class ModPackageService : IModPackageService
                 .ToArray();
             if (assemblyLoaders.Length > 1)
                 return Invalid("The archive contains both BepInEx and MelonLoader mod assemblies. Mixed-loader packages are not supported.");
+
+            var intrinsicCandidates = assemblyAnalyses
+                .Where(item => item.Analysis.Loader != ModLoaderKind.Unknown && !string.IsNullOrWhiteSpace(item.Analysis.IntrinsicId))
+                .ToArray();
+            if (intrinsicCandidates.Length == 1)
+            {
+                var intrinsic = intrinsicCandidates[0].Analysis;
+                intrinsicId = FirstKnownOptional(metadata?.IntrinsicId, intrinsic.IntrinsicId);
+                name = FirstKnown(metadata?.Name, manifest?.Name, intrinsic.DisplayName, name);
+                version = FirstKnownVersion(metadata?.Version, manifest?.VersionNumber, intrinsic.Version, version);
+            }
 
             var hasBepPath = entries.Any(item => IsBepInExPackagePath(item.Relative));
             var hasMelonModsPath = entries.Any(item => NormalizeRelative(item.Relative).StartsWith("Mods/", StringComparison.OrdinalIgnoreCase));
@@ -423,6 +437,7 @@ public sealed class ModPackageService : IModPackageService
                 Author = author,
                 Description = description,
                 PackageKey = packageKey,
+                IntrinsicId = intrinsicId,
                 Source = metadata?.Source ?? ModSourceType.LocalArchive,
                 Kind = kind,
                 Loader = loader,
@@ -547,6 +562,7 @@ public sealed class ModPackageService : IModPackageService
             Author = plan.Inspection.Author,
             Description = plan.Inspection.Description,
             PackageKey = plan.Inspection.PackageKey,
+            IntrinsicId = plan.Inspection.IntrinsicId,
             Source = plan.Source,
             Kind = plan.Inspection.Kind,
             Loader = plan.Inspection.Loader,
@@ -563,9 +579,15 @@ public sealed class ModPackageService : IModPackageService
     private ModInstallationRecord? FindExistingRecord(string gameDirectory, InstallPlan plan)
     {
         if (!string.IsNullOrWhiteSpace(plan.Inspection.PackageKey))
+            return _registry.FindByPackageKey(gameDirectory, plan.Inspection.PackageKey!);
+
+        if (!string.IsNullOrWhiteSpace(plan.Inspection.IntrinsicId))
         {
-            var byKey = _registry.FindByPackageKey(gameDirectory, plan.Inspection.PackageKey!);
-            if (byKey is not null) return byKey;
+            var byIntrinsic = _registry.LoadAll().FirstOrDefault(x =>
+                SamePath(x.GameDirectory, gameDirectory) &&
+                !string.IsNullOrWhiteSpace(x.IntrinsicId) &&
+                x.IntrinsicId!.Equals(plan.Inspection.IntrinsicId, StringComparison.OrdinalIgnoreCase));
+            if (byIntrinsic is not null) return byIntrinsic;
         }
 
         return _registry.LoadAll().FirstOrDefault(x =>
@@ -771,6 +793,22 @@ public sealed class ModPackageService : IModPackageService
             ? path[prefix.Length..]
             : path;
 
+    private static string FirstKnown(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? "";
+
+    private static string? FirstKnownOptional(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim();
+
+    private static string FirstKnownVersion(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value) && value.Trim() != "—")
+                return value.Trim();
+        }
+        return "—";
+    }
+
     private static bool TryInferThunderstoreIdentity(string sourcePath, string packageName, string version, out string packageKey, out string author)
     {
         packageKey = "";
@@ -933,6 +971,7 @@ public sealed class ModPackageService : IModPackageService
             Author = source.Author,
             Description = source.Description,
             PackageKey = source.PackageKey,
+            IntrinsicId = source.IntrinsicId,
             Source = installSource,
             Kind = source.Kind,
             Loader = source.Loader,

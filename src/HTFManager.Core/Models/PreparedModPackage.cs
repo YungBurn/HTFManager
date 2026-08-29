@@ -6,4 +6,5 @@ public sealed class PreparedModPackage
     public ModInstallMetadata? Metadata { get; init; }
     public PackageInspectionResult Inspection { get; init; } = new();
     public RemoteModPackage? RemotePackage { get; init; }
+    public string? TemporaryDirectory { get; init; }
 }

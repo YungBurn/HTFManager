@@ -7,6 +7,9 @@ public interface IProfileService
     IReadOnlyList<ModProfile> LoadProfiles();
     ModProfile Capture(string name, IReadOnlyList<InstalledMod> mods);
     void Save(ModProfile profile);
+    void AddMod(ModProfile profile, InstalledMod mod);
+    void RemoveMod(ModProfile profile, string modId);
+    void SetModState(ModProfile profile, string modId, bool enabled);
     void Delete(ModProfile profile);
     ProfilePackageInspection InspectPortablePackage(string packagePath, IReadOnlyList<InstalledMod> installedMods);
     ProfileOperationResult ExportPortablePackage(

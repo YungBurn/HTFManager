@@ -140,23 +140,34 @@ public partial class MainWindow : Window
         var paths = files.Select(f => f.Path.LocalPath).Where(File.Exists).ToArray();
         if (paths.Length == 0) return;
 
+        var bundlePackages = paths.Where(path => path.EndsWith(".htfbundle", StringComparison.OrdinalIgnoreCase)).ToArray();
         var profilePackages = paths.Where(path => path.EndsWith(".htfprofile", StringComparison.OrdinalIgnoreCase)).ToArray();
         var modPackages = paths.Where(path => path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ||
                                               path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)).ToArray();
 
-        if (profilePackages.Length > 0)
-        {
+        if (bundlePackages.Length > 0 || profilePackages.Length > 0)
             NavigateTo("Profiles");
-            foreach (var path in profilePackages)
+
+        foreach (var path in bundlePackages)
+        {
+            var inspection = App.Services.InspectProfileBundle(path);
+            if (!inspection.IsValid)
             {
-                var inspection = App.Services.InspectProfilePackage(path);
-                if (!inspection.IsValid)
-                {
-                    App.Services.ReportOperation(false, App.Services.Localization.Get("Ops.ProfileImportFailed") + ": " + inspection.Error);
-                    continue;
-                }
-                await new ProfileImportDialog(path, inspection).ShowDialog<bool>(this);
+                App.Services.ReportOperation(false, App.Services.Localization.Get("Ops.ProfileBundleImportFailed") + ": " + inspection.Error);
+                continue;
             }
+            await new ProfileBundleImportDialog(path, inspection).ShowDialog<bool>(this);
+        }
+
+        foreach (var path in profilePackages)
+        {
+            var inspection = App.Services.InspectProfilePackage(path);
+            if (!inspection.IsValid)
+            {
+                App.Services.ReportOperation(false, App.Services.Localization.Get("Ops.ProfileImportFailed") + ": " + inspection.Error);
+                continue;
+            }
+            await new ProfileImportDialog(path, inspection).ShowDialog<bool>(this);
         }
 
         if (modPackages.Length == 0) return;
@@ -182,7 +193,8 @@ public partial class MainWindow : Window
             var path = f.Path.LocalPath;
             return path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ||
                    path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ||
-                   path.EndsWith(".htfprofile", StringComparison.OrdinalIgnoreCase);
+                   path.EndsWith(".htfprofile", StringComparison.OrdinalIgnoreCase) ||
+                   path.EndsWith(".htfbundle", StringComparison.OrdinalIgnoreCase);
         });
     }
 

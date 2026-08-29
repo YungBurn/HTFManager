@@ -24,6 +24,7 @@ coverage/
 
 # HTF Manager local/generated artifacts
 *.htfprofile
+*.htfbundle
 *.dll.disabled
 cache/
 downloads/
