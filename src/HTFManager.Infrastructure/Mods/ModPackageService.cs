@@ -13,11 +13,13 @@ public sealed class ModPackageService : IModPackageService
 {
     private readonly ModRegistryStore _registry;
     private readonly string _dataDirectory;
+    private readonly IPackageArtifactStore? _artifactStore;
 
-    public ModPackageService(ModRegistryStore registry, string dataDirectory)
+    public ModPackageService(ModRegistryStore registry, string dataDirectory, IPackageArtifactStore? artifactStore = null)
     {
         _registry = registry;
         _dataDirectory = dataDirectory;
+        _artifactStore = artifactStore;
     }
 
     public Task<PackageInspectionResult> InspectAsync(string sourcePath, CancellationToken cancellationToken = default)
@@ -137,6 +139,8 @@ public sealed class ModPackageService : IModPackageService
 
         var gameDirectory = environment.GameDirectory;
         var existing = FindExistingRecord(gameDirectory, plan);
+        if (existing is not null)
+            _artifactStore?.PreserveCurrentArtifact(existing);
         var shouldEnable = existing is null ? autoEnable : IsRecordEnabled(existing, gameDirectory);
 
         if (plan.Files.Count == 0 && plan.Inspection.Kind == ModPackageKind.Modpack)
@@ -583,11 +587,11 @@ public sealed class ModPackageService : IModPackageService
 
         if (!string.IsNullOrWhiteSpace(plan.Inspection.IntrinsicId))
         {
-            var byIntrinsic = _registry.LoadAll().FirstOrDefault(x =>
+            return _registry.LoadAll().FirstOrDefault(x =>
                 SamePath(x.GameDirectory, gameDirectory) &&
+                string.IsNullOrWhiteSpace(x.PackageKey) &&
                 !string.IsNullOrWhiteSpace(x.IntrinsicId) &&
                 x.IntrinsicId!.Equals(plan.Inspection.IntrinsicId, StringComparison.OrdinalIgnoreCase));
-            if (byIntrinsic is not null) return byIntrinsic;
         }
 
         return _registry.LoadAll().FirstOrDefault(x =>
@@ -606,10 +610,11 @@ public sealed class ModPackageService : IModPackageService
             Directory.CreateDirectory(directory);
             var target = Path.Combine(directory, Path.GetFileName(sourcePath));
             if (!SamePath(sourcePath, target)) File.Copy(sourcePath, target, true);
+            _artifactStore?.CaptureArtifact(record, sourcePath);
         }
         catch
         {
-            // Cache failure must never make a successful game installation fail.
+            // Cache/history retention failure must never make a successful game installation fail.
         }
     }
 

@@ -98,6 +98,49 @@
       <Border Classes="card">
         <StackPanel Spacing="16">
           <StackPanel Spacing="5">
+            <TextBlock Classes="h2" Text="{DynamicResource Settings.Updates}" />
+            <TextBlock Classes="secondary" Text="{DynamicResource Settings.UpdatesDescription}" TextWrapping="Wrap" />
+          </StackPanel>
+
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
+            <StackPanel>
+              <TextBlock Text="{DynamicResource Settings.AutoCheckUpdates}" FontWeight="SemiBold" />
+              <TextBlock Classes="secondary" FontSize="11" Text="{DynamicResource Settings.AutoCheckUpdatesDescription}" TextWrapping="Wrap" />
+            </StackPanel>
+            <CheckBox x:Name="AutoUpdateCheck" Grid.Column="1" Click="UpdateSetting_Click" VerticalAlignment="Center" />
+          </Grid>
+
+          <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+            <TextBlock Text="{DynamicResource Settings.CurrentVersion}" Classes="secondary" />
+            <TextBlock x:Name="CurrentVersionText" Grid.Column="1" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="2" Text="{DynamicResource Settings.LatestVersion}" Classes="secondary" />
+            <TextBlock x:Name="LatestVersionText" Grid.Column="3" FontWeight="SemiBold" />
+            <TextBlock Grid.Row="1" Text="{DynamicResource Settings.LastChecked}" Classes="secondary" />
+            <TextBlock x:Name="LastCheckedText" Grid.Row="1" Grid.Column="1" />
+          </Grid>
+
+          <TextBlock x:Name="UpdateStatusText" Classes="secondary" TextWrapping="Wrap" />
+
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button x:Name="CheckUpdateButton" Classes="secondary" Click="CheckUpdate_Click">
+              <TextBlock Text="{DynamicResource Settings.CheckNow}" />
+            </Button>
+            <Button x:Name="DownloadUpdateButton" Classes="primary" Click="DownloadUpdate_Click" IsVisible="False">
+              <TextBlock Text="{DynamicResource Settings.DownloadUpdate}" />
+            </Button>
+            <Button x:Name="RestartUpdateButton" Classes="primary" Click="RestartUpdate_Click" IsVisible="False">
+              <TextBlock Text="{DynamicResource Settings.RestartUpdate}" />
+            </Button>
+            <Button x:Name="ViewReleaseButton" Classes="secondary" Click="ViewRelease_Click" IsVisible="False">
+              <TextBlock Text="{DynamicResource Settings.ViewRelease}" />
+            </Button>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card">
+        <StackPanel Spacing="16">
+          <StackPanel Spacing="5">
             <TextBlock Classes="h2" Text="{DynamicResource Settings.Advanced}" />
             <TextBlock Classes="secondary" Text="{DynamicResource Settings.AdvancedDescription}" TextWrapping="Wrap" />
           </StackPanel>

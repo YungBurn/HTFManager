@@ -22,6 +22,7 @@ public interface IProfileService
         string? importName = null);
     ProfileOperationResult ResolveMissingMods(ModProfile profile, IReadOnlyList<InstalledMod> installedMods);
     void RemoveMissingMod(ModProfile profile, string portableId);
+    ProfileOperationResult AcceptInstalledVersion(ModProfile profile, string portableId, InstalledMod installedMod);
     ProfileOperationResult CaptureConfigurationSnapshots(
         ModProfile profile,
         IReadOnlyList<ModConfigurationDocument> configurations,

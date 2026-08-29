@@ -16,7 +16,7 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
     private static readonly JsonSerializerOptions PortableJsonOptions = CreatePortableJsonOptions();
     private const string PortableFormat = "HTFManager.Profile";
     private const int PortableSchemaVersion = 1;
-    private const string ExportedWithVersion = "0.3.7";
+    private const string ExportedWithVersion = "0.3.8";
     private const long MaxPortableArchiveBytes = 32L * 1024L * 1024L;
     private const long MaxPortableConfigBytes = 4L * 1024L * 1024L;
 
@@ -518,6 +518,76 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
             catch { }
         }
         Save(profile);
+    }
+
+    public ProfileOperationResult AcceptInstalledVersion(ModProfile profile, string portableId, InstalledMod installedMod)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(installedMod);
+        NormalizeProfile(profile);
+
+        if (string.IsNullOrWhiteSpace(portableId))
+            return ProfileOperationResult.Fail("Profile requirement identity is unavailable.");
+        if (string.IsNullOrWhiteSpace(installedMod.Version) || installedMod.Version.Trim() == "—")
+            return ProfileOperationResult.Fail("The installed version is unknown and cannot become the profile baseline.");
+
+        var expectation = profile.ExpectedMods.FirstOrDefault(item =>
+            item.Requirement.PortableId.Equals(portableId, StringComparison.OrdinalIgnoreCase));
+        if (expectation is null)
+            return ProfileOperationResult.Fail("Profile requirement was not found.");
+
+        var requirement = expectation.Requirement;
+        if (installedMod.Source != requirement.Source)
+            return ProfileOperationResult.Fail("The installed Mod source does not match the profile expectation.");
+
+        if (!string.IsNullOrWhiteSpace(requirement.PackageKey))
+        {
+            if (string.IsNullOrWhiteSpace(installedMod.PackageKey) ||
+                !installedMod.PackageKey!.Equals(requirement.PackageKey, StringComparison.OrdinalIgnoreCase))
+                return ProfileOperationResult.Fail("The installed Mod does not match the profile PackageKey.");
+        }
+        else if (!string.IsNullOrWhiteSpace(requirement.IntrinsicId))
+        {
+            if (!string.IsNullOrWhiteSpace(installedMod.PackageKey) ||
+                string.IsNullOrWhiteSpace(installedMod.IntrinsicId) ||
+                !installedMod.IntrinsicId!.Equals(requirement.IntrinsicId, StringComparison.OrdinalIgnoreCase))
+                return ProfileOperationResult.Fail("The installed Mod does not match the profile intrinsic identity.");
+        }
+        else
+        {
+            return ProfileOperationResult.Fail("Only deterministic PackageKey or intrinsic identities can accept an installed version as baseline.");
+        }
+
+        requirement.Version = installedMod.Version.Trim();
+        requirement.Name = installedMod.Name;
+        requirement.Author = installedMod.Author;
+        requirement.FileName = Path.GetFileName(installedMod.FilePath).Replace(".disabled", "", StringComparison.OrdinalIgnoreCase);
+        requirement.Loader = installedMod.Loader;
+        requirement.Component = installedMod.Component;
+        requirement.Enabled = profile.ModStates.TryGetValue(installedMod.Id, out var enabled) ? enabled : installedMod.Enabled;
+        var previousResolvedModId = expectation.ResolvedModId;
+        expectation.ResolvedModId = installedMod.Id;
+        expectation.MetadataQuality = ProfileExpectationMetadataQuality.Complete;
+
+        if (!string.IsNullOrWhiteSpace(previousResolvedModId) &&
+            !previousResolvedModId.Equals(installedMod.Id, StringComparison.OrdinalIgnoreCase))
+            profile.ModStates.Remove(previousResolvedModId);
+        profile.ModStates[installedMod.Id] = requirement.Enabled;
+
+        // NormalizeProfile may have created a legacy placeholder for a ModStates entry that
+        // was not yet associated with a complete expectation. Once this operation establishes
+        // the authoritative binding, remove only that compatibility placeholder. Never remove
+        // another complete expectation silently.
+        profile.ExpectedMods.RemoveAll(item =>
+            !ReferenceEquals(item, expectation) &&
+            item.MetadataQuality == ProfileExpectationMetadataQuality.LegacyBindingOnly &&
+            !string.IsNullOrWhiteSpace(item.ResolvedModId) &&
+            item.ResolvedModId!.Equals(installedMod.Id, StringComparison.OrdinalIgnoreCase));
+
+        profile.UnresolvedMods.RemoveAll(item =>
+            item.PortableId.Equals(portableId, StringComparison.OrdinalIgnoreCase));
+        Save(profile);
+        return ProfileOperationResult.Ok($"Accepted installed version {requirement.Version} as the profile baseline.");
     }
 
     public ProfileOperationResult CaptureConfigurationSnapshots(

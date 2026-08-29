@@ -144,7 +144,7 @@ public sealed class ProfileBundleServiceTests : IDisposable
     }
 
     [Fact]
-    public void InspectBundle_VersionMismatchNeverExposesBundledInstallCandidate()
+    public void InspectBundle_VersionMismatchExposesExactPayloadForExplicitReconciliation()
     {
         var sender = CreateManagedInstalled("1.2.0");
         var profile = _profiles.Capture("Shared", new[] { sender });
@@ -156,7 +156,58 @@ public sealed class ProfileBundleServiceTests : IDisposable
 
         Assert.True(inspection.IsValid, inspection.Error);
         Assert.Equal(1, inspection.VersionMismatchCount);
-        Assert.Null(Assert.Single(inspection.Items).BundledPayload);
+        Assert.NotNull(Assert.Single(inspection.Items).BundledPayload);
+    }
+
+    [Fact]
+    public void BuildExportPlan_VersionDriftBundlesRetainedExactExpectedArtifact()
+    {
+        var expectedInstalled = CreateManagedInstalled("1.2.0");
+        var expectedRecord = _registry.Find(expectedInstalled.RegistryId!);
+        Assert.NotNull(expectedRecord);
+        _artifacts.PreserveCurrentArtifact(expectedRecord!);
+        Assert.NotNull(_artifacts.FindExactArtifact(TestData.Expectation(version: "1.2.0").Requirement));
+
+        var currentInstalled = CreateManagedInstalled("2.0.0");
+        var profile = new ModProfile
+        {
+            Name = "Drifted but portable",
+            ExpectedMods = new List<ProfileModExpectation>
+            {
+                TestData.Expectation(version: "1.2.0", resolvedModId: currentInstalled.Id)
+            },
+            ModStates = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase) { [currentInstalled.Id] = true }
+        };
+
+        var item = Assert.Single(_bundles.BuildExportPlan(profile, new[] { currentInstalled }).Items);
+
+        Assert.Equal(ProfileBundleExportDisposition.Bundled, item.Disposition);
+        Assert.NotNull(item.Artifact);
+        Assert.Equal("1.2.0", item.Artifact!.Version);
+    }
+
+    [Fact]
+    public void BuildExportPlan_MissingModBundlesRetainedExactExpectedArtifact()
+    {
+        var previouslyInstalled = CreateManagedInstalled("1.2.0");
+        var record = _registry.Find(previouslyInstalled.RegistryId!);
+        Assert.NotNull(record);
+        _artifacts.PreserveCurrentArtifact(record!);
+
+        var profile = new ModProfile
+        {
+            Name = "Missing but portable",
+            ExpectedMods = new List<ProfileModExpectation>
+            {
+                TestData.Expectation(version: "1.2.0", resolvedModId: previouslyInstalled.Id)
+            }
+        };
+
+        var item = Assert.Single(_bundles.BuildExportPlan(profile, Array.Empty<InstalledMod>()).Items);
+
+        Assert.Equal(ProfileBundleExportDisposition.Bundled, item.Disposition);
+        Assert.NotNull(item.Artifact);
+        Assert.Equal("1.2.0", item.Artifact!.Version);
     }
 
     [Fact]
@@ -491,7 +542,7 @@ public sealed class ProfileBundleServiceTests : IDisposable
         => new()
         {
             SchemaVersion = 1,
-            GeneratedWithVersion = "0.3.7",
+            GeneratedWithVersion = "0.3.8",
             ProfileEntry = "profile.htfprofile",
             ProfileSha256 = HashFile(profilePath)
         };

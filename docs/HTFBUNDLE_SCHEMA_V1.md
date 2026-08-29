@@ -37,7 +37,7 @@ Illustrative contract:
 ```json
 {
   "schemaVersion": 1,
-  "generatedWithVersion": "0.3.7",
+  "generatedWithVersion": "0.3.8",
   "profileEntry": "profile.htfprofile",
   "profileSha256": "...",
   "payloads": [
@@ -138,7 +138,7 @@ open ZIP read-only
 → inspect payload descriptors
 ```
 
-Payload bytes are not extracted during initial inspection.
+Payload bytes are not extracted during initial inspection. A compatible exact payload may be associated with either a `Missing` item or, beginning with v0.3.8, a `VersionMismatch` item for explicit version reconciliation. Merely exposing that descriptor does not authorize installation.
 
 ## Lazy extraction
 

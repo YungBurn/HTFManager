@@ -19,4 +19,6 @@ public sealed class AppSettings
     public int MaxConfigurationBackups { get; set; } = 10;
     public bool DeveloperMode { get; set; } = false;
     public int AcknowledgedConfigSafetyVersion { get; set; } = 0;
+    public bool AutomaticallyCheckForUpdates { get; set; } = true;
+    public DateTimeOffset? LastUpdateCheckUtc { get; set; }
 }

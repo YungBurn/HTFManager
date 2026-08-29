@@ -8,4 +8,8 @@ public sealed class PackageArtifact
     public string Sha256 { get; init; } = "";
     public long Length { get; init; }
     public HtfBundleArtifactKind Kind { get; init; }
+    public string? PackageKey { get; init; }
+    public string? IntrinsicId { get; init; }
+    public string Version { get; init; } = "—";
+    public ModSourceType Source { get; init; } = ModSourceType.LocalArchive;
 }

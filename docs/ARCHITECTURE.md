@@ -1,4 +1,4 @@
-# HTF Manager Architecture — v0.3.7
+# HTF Manager Architecture — v0.3.8
 
 ## 1. Design goals
 
@@ -239,7 +239,7 @@ Data categories include settings, profiles, Mod/loader ownership records, caches
 
 Generated build output, game files, downloaded loader/Mod binaries and local application data do not belong in Git.
 
-## 14. Active v0.3.7 subsystem
+## 14. v0.3.7 portable-bundle baseline
 
 v0.3.7 is **Portable Profile Bundle & Health**. `ExpectedMods` is the canonical desired inventory and `ProfileHealthService` compares that desired state with the current machine as `Healthy`, `Missing`, `VersionMismatch` or `IdentityUncertain`. The calculation is read-only; only `Missing` blocks profile application.
 
@@ -251,4 +251,39 @@ Bundled payloads are transport artifacts, not a second installation path. A sele
 
 The restore planner gives an exact bundle payload priority over Thunderstore for `Missing` requirements and can operate offline when every unresolved requirement is already classifiable from the bundle/manual state. Remote fallback behavior remains the existing v0.3.6 behavior for genuinely missing Thunderstore requirements. Automatic version replacement/downgrade reconciliation is explicitly outside v0.3.7 and remains a later release. Nexus support also remains a later provider integration.
 
-The canonical scope and exclusions are defined in `docs/V0.3.7_SCOPE_LOCK.md`.
+The canonical v0.3.7 scope and exclusions are defined in `docs/V0.3.7_SCOPE_LOCK.md`.
+
+## 15. Active v0.3.8 subsystem — version reconciliation
+
+v0.3.8 is **Version Reconciliation & Application Delivery**. It keeps `ProfileHealthService` read-only, but adds `ProfileVersionReconciliationService` to plan explicit actions for `VersionMismatch` items. Reconciliation never treats a different available version as good enough. Exact source priority is active imported bundle payload, retained exact artifact history, exact Thunderstore version, then manual resolution.
+
+`PackageArtifactStore` now maintains content-addressed verified history under the manager data directory. Before a managed replacement the current verified source artifact is preserved when available; successful new installs capture their source artifact when package caching is enabled. Historical lookups require deterministic identity, the same logical source, exact version, file size and SHA-256. A provider-backed requirement cannot fall back to an intrinsic local identity.
+
+The restore path remains:
+
+```text
+VersionMismatch
+→ exact reconciliation plan
+→ explicit Restore expected version
+→ Package Inspector
+→ existing transactional installer
+→ refresh local Mods / health
+```
+
+Because the existing installer already backs up owned target files, removes obsolete owned files, commits new files and rolls back failed transactions, reconciliation reuses that path rather than creating a second version-replacement engine. User configuration remains preserved by the existing installer policy.
+
+`AcceptInstalledVersion` is a separate explicit profile mutation. It is allowed only for a deterministic identity match with a known installed version. It updates the profile expectation/binding and never fabricates a provider identity or claims external/manual ownership.
+
+A `.htfbundle` opened on a mismatched receiver may expose its exact expected payload to the reconciliation planner, but this does not authorize installation by itself. Full export may also use a verified historical artifact for the profile-expected version when the sender's currently installed version has drifted. The profile desired state remains authoritative.
+
+## 16. Application delivery and updates
+
+v0.3.8 introduces a supported Windows release artifact built as `.NET 10`, `win-x64`, self-contained, single-file `HTFManager.exe`, with trimming disabled. `build/publish-win-x64.ps1` creates the executable plus `update-manifest.json` and `SHA256SUMS.txt`; `.github/workflows/release.yml` validates a version tag, runs build/tests, publishes those assets and attaches them to the GitHub Release.
+
+`GitHubReleaseUpdateService` treats the public stable GitHub Release as update metadata. It compares the running application version to the latest stable tag, validates update-manifest schema/channel/RID/version/asset metadata, streams the executable to `%LOCALAPPDATA%\HTFManager\updates`, then verifies size and SHA-256 before marking the update ready. Automatic startup checks are throttled by `LastUpdateCheckUtc`; manual **Check now** bypasses the throttle.
+
+`WindowsApplicationUpdateApplier` is intentionally separate from network/download logic. It only enables self-replacement for a supported published single-file Windows executable in a writable directory. The running EXE is copied to a temporary update-host path, the main process exits, and that temporary host verifies the staged SHA-256 again, backs up the current target to `.old`, replaces it, starts the new executable, and restores the old target if replacement/startup application fails synchronously.
+
+The update subsystem never modifies `%LOCALAPPDATA%\HTFManager` profiles/package history except its own `updates` staging directory. v0.3.8 does not include UAC elevation, forced updates, delta updates, prerelease channels, installers or Authenticode verification. Those are later distribution-hardening concerns.
+
+The canonical v0.3.8 scope is `docs/V0.3.8_SCOPE_LOCK.md`; the updater file contract is `docs/UPDATE_MANIFEST_V1.md`.

@@ -44,7 +44,7 @@ namespace HTFManager.Tests
             var zip = CreateSingleAssemblyZip("TrueDotCrosshair.zip");
             var service = new ModPackageService(new ModRegistryStore(_root), _root);
 
-            var inspection = await service.InspectAsync(zip);
+            var inspection = await service.InspectAsync(zip, TestContext.Current.CancellationToken);
 
             Assert.True(inspection.IsValid, inspection.Error);
             Assert.Null(inspection.PackageKey);
