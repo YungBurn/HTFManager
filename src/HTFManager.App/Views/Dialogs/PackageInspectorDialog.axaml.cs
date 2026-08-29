@@ -76,10 +76,14 @@ public partial class PackageInspectorDialog : Window
             _ => "Inspector.Risk.Blocked"
         });
 
-        ModeText.Text = i.IsUpgrade
-            ? $"{App.Services.Localization.Get("Inspector.UpdateMode")}: {i.ExistingVersion ?? "—"} → {i.Version}"
-            : App.Services.Localization.Get("Inspector.InstallMode");
-        InstallButtonText.Text = App.Services.Localization.Get(i.IsUpgrade ? "Common.Update" : "Common.Install");
+        ModeText.Text = _prepared.IsVersionReconciliation
+            ? $"{App.Services.Localization.Get("Inspector.ReconcileMode")}: {i.ExistingVersion ?? "—"} → {i.Version}"
+            : i.IsUpgrade
+                ? $"{App.Services.Localization.Get("Inspector.UpdateMode")}: {i.ExistingVersion ?? "—"} → {i.Version}"
+                : App.Services.Localization.Get("Inspector.InstallMode");
+        InstallButtonText.Text = App.Services.Localization.Get(_prepared.IsVersionReconciliation
+            ? "Common.ReplaceVersion"
+            : i.IsUpgrade ? "Common.Update" : "Common.Install");
 
         MissingLoaderPanel.IsVisible = i.MissingLoader;
         MissingLoaderText.Text = string.Format(App.Services.Localization.Get("Inspector.LoaderMissingText"), LoaderLabel(i.Loader));
@@ -131,6 +135,7 @@ public partial class PackageInspectorDialog : Window
             Metadata = _prepared.Metadata,
             RemotePackage = _prepared.RemotePackage,
             TemporaryDirectory = _prepared.TemporaryDirectory,
+            IsVersionReconciliation = _prepared.IsVersionReconciliation,
             Inspection = refreshed
         };
         Render();
@@ -151,6 +156,7 @@ public partial class PackageInspectorDialog : Window
                 Metadata = _prepared.Metadata,
                 RemotePackage = _prepared.RemotePackage,
                 TemporaryDirectory = _prepared.TemporaryDirectory,
+                IsVersionReconciliation = _prepared.IsVersionReconciliation,
                 Inspection = refreshed
             };
             Render();

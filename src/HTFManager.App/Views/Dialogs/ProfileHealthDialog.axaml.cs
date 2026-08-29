@@ -9,6 +9,8 @@ namespace HTFManager.App.Views.Dialogs;
 public partial class ProfileHealthDialog : Window
 {
     private string _profileName = "";
+    private IReadOnlyDictionary<string, ProfileVersionReconciliationItem> _reconciliation =
+        new Dictionary<string, ProfileVersionReconciliationItem>(StringComparer.OrdinalIgnoreCase);
 
     public ProfileHealthDialog()
     {
@@ -39,6 +41,11 @@ public partial class ProfileHealthDialog : Window
         }
 
         var report = App.Services.GetProfileHealth(profile);
+        var reconciliation = App.Services.BuildProfileVersionReconciliationPlan(profile);
+        _reconciliation = reconciliation.Items.ToDictionary(
+            item => item.Health.Expectation.Requirement.PortableId,
+            StringComparer.OrdinalIgnoreCase);
+
         ProfileNameText.Text = profile.Name;
         HealthyCountText.Text = report.HealthyCount.ToString();
         MissingCountText.Text = report.MissingCount.ToString();
@@ -96,15 +103,7 @@ public partial class ProfileHealthDialog : Window
         });
 
         if (item.Status == ProfileHealthStatus.VersionMismatch)
-        {
-            labels.Children.Add(new TextBlock
-            {
-                Text = App.Services.Localization.Get("Health.NoVersionRepair"),
-                Foreground = ResourceBrush("Brush.Warning"),
-                FontSize = 10,
-                TextWrapping = TextWrapping.Wrap
-            });
-        }
+            AddReconciliationControls(labels, item);
 
         var badge = new Border
         {
@@ -135,6 +134,99 @@ public partial class ProfileHealthDialog : Window
             Padding = new Thickness(12, 10),
             Child = grid
         };
+    }
+
+    private void AddReconciliationControls(StackPanel labels, ProfileHealthItem health)
+    {
+        var portableId = health.Expectation.Requirement.PortableId;
+        _reconciliation.TryGetValue(portableId, out var reconciliation);
+
+        labels.Children.Add(new TextBlock
+        {
+            Text = BuildReconciliationMessage(reconciliation, health),
+            Foreground = ResourceBrush("Brush.Warning"),
+            FontSize = 10,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 3, 0, 0)
+        });
+
+        var actions = new StackPanel
+        {
+            Orientation = Avalonia.Layout.Orientation.Horizontal,
+            Spacing = 8,
+            Margin = new Thickness(0, 6, 0, 0)
+        };
+
+        var restore = new Button
+        {
+            Classes = { "primary" },
+            Padding = new Thickness(10, 5),
+            IsEnabled = reconciliation?.CanRestoreExpected == true && !App.Services.IsBusy,
+            Content = App.Services.Localization.Get("Health.RestoreExpected")
+        };
+        restore.Click += async (_, _) => await RestoreExpectedAsync(health);
+        actions.Children.Add(restore);
+
+        if (reconciliation?.CanAcceptInstalled == true)
+        {
+            var armed = false;
+            var accept = new Button
+            {
+                Classes = { "secondary" },
+                Padding = new Thickness(10, 5),
+                Content = App.Services.Localization.Get("Health.AcceptInstalled")
+            };
+            accept.Click += (_, _) =>
+            {
+                if (!armed)
+                {
+                    armed = true;
+                    accept.Content = App.Services.Localization.Get("Health.ConfirmAcceptInstalled");
+                    return;
+                }
+
+                var profile = CurrentProfile();
+                if (profile is not null)
+                    App.Services.AcceptInstalledProfileVersion(profile, health);
+                Render();
+            };
+            actions.Children.Add(accept);
+        }
+
+        labels.Children.Add(actions);
+    }
+
+    private async Task RestoreExpectedAsync(ProfileHealthItem health)
+    {
+        var profile = CurrentProfile();
+        if (profile is null) return;
+        var prepared = await App.Services.PrepareExpectedProfileVersionAsync(profile, health);
+        if (prepared is null)
+        {
+            Render();
+            return;
+        }
+
+        var installed = await new PackageInspectorDialog(prepared).ShowDialog<bool>(this);
+        if (installed)
+            Render();
+    }
+
+    private string BuildReconciliationMessage(ProfileVersionReconciliationItem? reconciliation, ProfileHealthItem health)
+    {
+        if (reconciliation is null)
+            return App.Services.Localization.Get("Health.ReconcileUnavailable");
+
+        var version = NormalizeVersion(health.Expectation.Requirement.Version);
+        var key = reconciliation.Source switch
+        {
+            ProfileVersionReconciliationSource.Bundle => "Health.Reconcile.Bundle",
+            ProfileVersionReconciliationSource.RetainedArtifact => "Health.Reconcile.Retained",
+            ProfileVersionReconciliationSource.Thunderstore => "Health.Reconcile.Thunderstore",
+            ProfileVersionReconciliationSource.CatalogRequired => "Health.Reconcile.Catalog",
+            _ => "Health.Reconcile.Manual"
+        };
+        return string.Format(App.Services.Localization.Get(key), version);
     }
 
     private string BuildIdentityLine(ProfileHealthItem item)

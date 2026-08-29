@@ -1,3 +1,4 @@
+using System.Reflection;
 using HTFManager.Core.Interfaces;
 using HTFManager.Core.Models;
 
@@ -20,6 +21,10 @@ public sealed class AppServices
     public IProfileRestoreService ProfileRestoreService { get; }
     public IProfileHealthService ProfileHealthService { get; }
     public IProfileBundleService ProfileBundleService { get; }
+    public IProfileVersionReconciliationService ProfileVersionReconciliationService { get; }
+    public IPackageArtifactStore PackageArtifactStore { get; }
+    public IApplicationUpdateService ApplicationUpdateService { get; }
+    public IApplicationUpdateApplier ApplicationUpdateApplier { get; }
     public ISystemShell Shell { get; }
     public IGameLauncher Launcher { get; }
 
@@ -33,6 +38,12 @@ public sealed class AppServices
     public bool IsBusy { get; private set; }
     public string? OperationMessage { get; private set; }
     public bool OperationSucceeded { get; private set; } = true;
+    public string ApplicationVersion { get; } = ResolveApplicationVersion();
+    public ApplicationUpdateInfo ApplicationUpdate { get; private set; } = new()
+    {
+        State = ApplicationUpdateState.Idle,
+        CurrentVersion = ResolveApplicationVersion()
+    };
 
     private readonly Dictionary<string, string> _profileBundleSources = new(StringComparer.OrdinalIgnoreCase);
 
@@ -54,6 +65,10 @@ public sealed class AppServices
         IProfileRestoreService profileRestoreService,
         IProfileHealthService profileHealthService,
         IProfileBundleService profileBundleService,
+        IProfileVersionReconciliationService profileVersionReconciliationService,
+        IPackageArtifactStore packageArtifactStore,
+        IApplicationUpdateService applicationUpdateService,
+        IApplicationUpdateApplier applicationUpdateApplier,
         ISystemShell shell,
         IGameLauncher launcher)
     {
@@ -72,6 +87,10 @@ public sealed class AppServices
         ProfileRestoreService = profileRestoreService;
         ProfileHealthService = profileHealthService;
         ProfileBundleService = profileBundleService;
+        ProfileVersionReconciliationService = profileVersionReconciliationService;
+        PackageArtifactStore = packageArtifactStore;
+        ApplicationUpdateService = applicationUpdateService;
+        ApplicationUpdateApplier = applicationUpdateApplier;
         Shell = shell;
         Launcher = launcher;
 
@@ -623,6 +642,175 @@ public sealed class AppServices
     }
 
 
+    public ProfileVersionReconciliationPlan BuildProfileVersionReconciliationPlan(ModProfile profile)
+    {
+        var bundle = GetProfileBundleInspection(profile);
+        IReadOnlyList<HtfBundlePayloadDescriptor> payloads = bundle?.Manifest?.Payloads is { } bundlePayloads
+            ? bundlePayloads
+            : Array.Empty<HtfBundlePayloadDescriptor>();
+        return ProfileVersionReconciliationService.BuildPlan(profile, Mods, Catalog, payloads, CatalogLoaded);
+    }
+
+    public bool AcceptInstalledProfileVersion(ModProfile profile, ProfileHealthItem healthItem)
+    {
+        if (healthItem.Status != ProfileHealthStatus.VersionMismatch || healthItem.InstalledMod is null) return false;
+        var result = ProfileService.AcceptInstalledVersion(
+            profile,
+            healthItem.Expectation.Requirement.PortableId,
+            healthItem.InstalledMod);
+        SetOperation(result.Success, result.Success
+            ? Localization.Get("Ops.ProfileVersionAccepted")
+            : Localization.Get("Ops.ProfileVersionAcceptFailed") + ": " + result.Message);
+        if (result.Success) Refresh();
+        return result.Success;
+    }
+
+    public async Task<PreparedModPackage?> PrepareExpectedProfileVersionAsync(ModProfile profile, ProfileHealthItem healthItem)
+    {
+        if (healthItem.Status != ProfileHealthStatus.VersionMismatch) return null;
+        var portableId = healthItem.Expectation.Requirement.PortableId;
+        var plan = BuildProfileVersionReconciliationPlan(profile);
+        var item = plan.Items.FirstOrDefault(candidate =>
+            candidate.Health.Expectation.Requirement.PortableId.Equals(portableId, StringComparison.OrdinalIgnoreCase));
+        if (item is null) return null;
+
+        if (item.Source == ProfileVersionReconciliationSource.CatalogRequired)
+        {
+            try
+            {
+                Catalog = await CatalogService.GetPackagesAsync();
+                CatalogLoaded = true;
+                ApplyCatalogState();
+                StateChanged?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                SetOperation(false, Localization.Get("Ops.ProfileVersionRestoreFailed") + ": " + ex.Message);
+                return null;
+            }
+
+            plan = BuildProfileVersionReconciliationPlan(profile);
+            item = plan.Items.FirstOrDefault(candidate =>
+                candidate.Health.Expectation.Requirement.PortableId.Equals(portableId, StringComparison.OrdinalIgnoreCase));
+            if (item is null) return null;
+        }
+
+        var requirement = item.Health.Expectation.Requirement;
+        PreparedModPackage? prepared = null;
+        switch (item.Source)
+        {
+            case ProfileVersionReconciliationSource.Bundle when item.BundlePayload is not null:
+            {
+                var bundlePath = GetProfileBundleSource(profile);
+                if (bundlePath is not null)
+                    prepared = await PrepareBundledPackageAsync(bundlePath, item.BundlePayload, requirement);
+                break;
+            }
+            case ProfileVersionReconciliationSource.RetainedArtifact when item.Artifact is not null:
+                prepared = await PrepareRetainedArtifactAsync(item.Artifact, requirement);
+                break;
+            case ProfileVersionReconciliationSource.Thunderstore when item.RemotePackage is not null && item.RemoteVersion is not null:
+                prepared = await PrepareRemotePackageAsync(item.RemotePackage, item.RemoteVersion);
+                break;
+        }
+
+        if (prepared is null)
+        {
+            SetOperation(false, Localization.Get("Ops.ProfileVersionRestoreUnavailable"));
+            return null;
+        }
+
+        return new PreparedModPackage
+        {
+            SourcePath = prepared.SourcePath,
+            Metadata = prepared.Metadata,
+            Inspection = prepared.Inspection,
+            RemotePackage = prepared.RemotePackage,
+            TemporaryDirectory = prepared.TemporaryDirectory,
+            IsVersionReconciliation = true
+        };
+    }
+
+    private async Task<PreparedModPackage?> PrepareRetainedArtifactAsync(PackageArtifact artifact, ProfileModRequirement requirement)
+    {
+        if (!File.Exists(artifact.Path)) return null;
+        SetBusy(true, Localization.Get("Ops.InspectingPackage"));
+        try
+        {
+            var metadata = new ModInstallMetadata
+            {
+                Source = requirement.Source,
+                PackageKey = requirement.PackageKey,
+                IntrinsicId = requirement.IntrinsicId,
+                Name = requirement.Name,
+                Version = requirement.Version,
+                Author = requirement.Author
+            };
+            var inspection = await ModPackageService.InspectForInstallAsync(artifact.Path, Environment, metadata);
+            return new PreparedModPackage
+            {
+                SourcePath = artifact.Path,
+                Metadata = metadata,
+                Inspection = inspection
+            };
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    public async Task CheckForApplicationUpdatesAsync(bool force = false)
+    {
+        if (!force && Settings.LastUpdateCheckUtc is { } last && DateTimeOffset.UtcNow - last < TimeSpan.FromHours(24))
+            return;
+
+        ApplicationUpdate = new ApplicationUpdateInfo
+        {
+            State = ApplicationUpdateState.Checking,
+            CurrentVersion = ApplicationVersion
+        };
+        StateChanged?.Invoke(this, EventArgs.Empty);
+
+        ApplicationUpdate = await ApplicationUpdateService.CheckAsync(ApplicationVersion);
+        Settings.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
+        SettingsStore.Save(Settings);
+        StateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public async Task<bool> DownloadApplicationUpdateAsync()
+    {
+        if (!ApplicationUpdate.IsUpdateAvailable || ApplicationUpdate.Manifest is null) return false;
+        ApplicationUpdate = new ApplicationUpdateInfo
+        {
+            State = ApplicationUpdateState.Downloading,
+            CurrentVersion = ApplicationUpdate.CurrentVersion,
+            LatestVersion = ApplicationUpdate.LatestVersion,
+            ReleaseName = ApplicationUpdate.ReleaseName,
+            ReleaseNotes = ApplicationUpdate.ReleaseNotes,
+            ReleasePageUrl = ApplicationUpdate.ReleasePageUrl,
+            PublishedAt = ApplicationUpdate.PublishedAt,
+            Manifest = ApplicationUpdate.Manifest,
+            AssetDownloadUrl = ApplicationUpdate.AssetDownloadUrl
+        };
+        StateChanged?.Invoke(this, EventArgs.Empty);
+        ApplicationUpdate = await ApplicationUpdateService.DownloadAsync(ApplicationUpdate);
+        StateChanged?.Invoke(this, EventArgs.Empty);
+        return ApplicationUpdate.State == ApplicationUpdateState.Ready;
+    }
+
+    public bool CanApplyApplicationUpdate(out string? reason)
+        => ApplicationUpdateApplier.CanApply(ApplicationUpdate, out reason);
+
+    public bool StartApplicationUpdate(out string? error)
+        => ApplicationUpdateApplier.StartApplyAndRestart(ApplicationUpdate, out error);
+
+    public void OpenApplicationReleasePage()
+    {
+        if (!string.IsNullOrWhiteSpace(ApplicationUpdate.ReleasePageUrl))
+            Shell.OpenUri(ApplicationUpdate.ReleasePageUrl!);
+    }
+
     public ProfileHealthReport GetProfileHealth(ModProfile profile)
         => ProfileHealthService.Evaluate(profile, Mods);
 
@@ -1038,6 +1226,18 @@ public sealed class AppServices
         catch
         {
         }
+    }
+
+    private static string ResolveApplicationVersion()
+    {
+        var informational = Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(informational))
+        {
+            var plus = informational.IndexOf('+');
+            return plus >= 0 ? informational[..plus] : informational;
+        }
+        var version = Assembly.GetEntryAssembly()?.GetName().Version;
+        return version is null ? "0.3.8" : $"{version.Major}.{version.Minor}.{version.Build}";
     }
 
     private void SetBusy(bool busy, string? message = null)

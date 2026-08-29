@@ -7,4 +7,5 @@ public sealed class PreparedModPackage
     public PackageInspectionResult Inspection { get; init; } = new();
     public RemoteModPackage? RemotePackage { get; init; }
     public string? TemporaryDirectory { get; init; }
+    public bool IsVersionReconciliation { get; init; }
 }

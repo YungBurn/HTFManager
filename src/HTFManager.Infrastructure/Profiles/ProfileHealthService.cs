@@ -47,6 +47,7 @@ public sealed class ProfileHealthService : IProfileHealthService
         if (!string.IsNullOrWhiteSpace(requirement.IntrinsicId))
         {
             var intrinsicMatches = installedMods
+                .Where(mod => string.IsNullOrWhiteSpace(mod.PackageKey))
                 .Where(mod => !string.IsNullOrWhiteSpace(mod.IntrinsicId) &&
                               mod.IntrinsicId!.Equals(requirement.IntrinsicId, StringComparison.OrdinalIgnoreCase))
                 .ToArray();

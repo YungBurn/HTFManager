@@ -50,6 +50,12 @@ public partial class MainWindow : Window
         App.Services.Localization.LanguageChanged += OnLanguageChanged;
         App.Services.ConfigurationRequested += (_, _) => NavigateTo("Configuration");
         Closing += HandleClosing;
+        Opened += async (_, _) =>
+        {
+            if (App.Services.Settings.AutomaticallyCheckForUpdates)
+                await App.Services.CheckForApplicationUpdatesAsync();
+        };
+        ApplicationVersionText.Text = "v" + App.Services.ApplicationVersion;
 
         DragDrop.SetAllowDrop(this, true);
         DragDrop.AddDragEnterHandler(this, OnDragEnter);

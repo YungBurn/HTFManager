@@ -11,7 +11,7 @@ namespace HTFManager.Infrastructure.Profiles;
 public sealed class ProfileBundleService : IProfileBundleService
 {
     private const int BundleSchemaVersion = 1;
-    private const string GeneratedWithVersion = "0.3.7";
+    private const string GeneratedWithVersion = "0.3.8";
     private const int MaxEntries = 2048;
     private const long MaxManifestBytes = 2L * 1024L * 1024L;
     private const long MaxProfileBytes = 32L * 1024L * 1024L;
@@ -192,7 +192,7 @@ public sealed class ProfileBundleService : IProfileBundleService
                 return new ProfileBundleInspectionItem
                 {
                     Health = item,
-                    BundledPayload = item.Status == ProfileHealthStatus.Missing ? payload : null
+                    BundledPayload = item.Status is ProfileHealthStatus.Missing or ProfileHealthStatus.VersionMismatch ? payload : null
                 };
             }).ToArray();
 
@@ -325,6 +325,28 @@ public sealed class ProfileBundleService : IProfileBundleService
     {
         var expectation = health.Expectation;
         var requirement = expectation.Requirement;
+        if ((health.Status is ProfileHealthStatus.Missing or ProfileHealthStatus.VersionMismatch) &&
+            expectation.MetadataQuality == ProfileExpectationMetadataQuality.Complete &&
+            (!string.IsNullOrWhiteSpace(requirement.PackageKey) || !string.IsNullOrWhiteSpace(requirement.IntrinsicId)) &&
+            NormalizeVersion(requirement.Version) != "—")
+        {
+            var expectedArtifact = _artifacts.FindExactArtifact(requirement);
+            if (expectedArtifact is not null)
+            {
+                return new ProfileBundleExportItem
+                {
+                    Expectation = expectation,
+                    Health = health,
+                    InstalledMod = health.InstalledMod,
+                    Disposition = ProfileBundleExportDisposition.Bundled,
+                    Artifact = expectedArtifact,
+                    Reason = health.Status == ProfileHealthStatus.VersionMismatch
+                        ? "The exact profile-expected version is retained in artifact history; current installed version drift does not change the desired bundle state."
+                        : "The expected Mod is currently missing, but its exact verified source artifact is retained in package history."
+                };
+            }
+        }
+
         if (health.Status == ProfileHealthStatus.VersionMismatch)
         {
             return new ProfileBundleExportItem
@@ -333,7 +355,7 @@ public sealed class ProfileBundleService : IProfileBundleService
                 Health = health,
                 InstalledMod = health.InstalledMod,
                 Disposition = ProfileBundleExportDisposition.VersionDrift,
-                Reason = "Installed version differs from the profile expectation; v0.3.7 does not bundle the drifted artifact."
+                Reason = "Installed version differs from the profile expectation and no verified artifact for the exact expected version is available."
             };
         }
 
@@ -390,7 +412,7 @@ public sealed class ProfileBundleService : IProfileBundleService
                 Disposition = requirement.Source == ModSourceType.Thunderstore
                     ? ProfileBundleExportDisposition.RemoteOnly
                     : ProfileBundleExportDisposition.Manual,
-                Reason = "The profile does not record an exact expected version, so v0.3.7 will not claim an exact bundled artifact."
+                Reason = "The profile does not record an exact expected version, so HTF Manager will not claim an exact bundled artifact."
             };
         }
 

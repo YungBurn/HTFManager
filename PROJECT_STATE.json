@@ -1,13 +1,14 @@
 {
   "project": "HTFManager",
   "productName": "HTF Manager",
-  "version": "0.3.7",
-  "status": "release-candidate",
+  "version": "0.3.8",
+  "status": "implementation-candidate",
   "buildVerified": false,
   "solution": "HTFManager.slnx",
   "appProject": "src/HTFManager.App/HTFManager.App.csproj",
   "targetFramework": "net10.0",
   "uiFramework": "Avalonia 12.1.1",
+  "primaryRuntime": "win-x64 self-contained single-file",
   "game": "How to Fish",
   "supportedLoaders": [
     "BepInEx 5",
@@ -15,6 +16,8 @@
   ],
   "repository": "https://github.com/YungBurn/HTFManager",
   "defaultBranch": "main",
-  "nextPlannedVersion": "0.3.8",
-  "nextPlannedFeature": "Profile Version Reconciliation"
+  "currentFeature": "Version Reconciliation & Application Delivery",
+  "expectedAutomatedTests": 71,
+  "nextPlannedVersion": "0.3.9",
+  "nextPlannedFeature": "Updater hardening, signed distribution, and post-v0.3.8 product polish"
 }

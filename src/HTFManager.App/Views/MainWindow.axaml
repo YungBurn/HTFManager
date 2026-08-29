@@ -70,7 +70,7 @@
               <TextBlock Text="{DynamicResource Nav.Settings}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
-          <TextBlock Margin="14,0" Text="v0.3.7" FontSize="11" Foreground="{DynamicResource Brush.TextSecondary}" />
+          <TextBlock x:Name="ApplicationVersionText" Margin="14,0" FontSize="11" Foreground="{DynamicResource Brush.TextSecondary}" />
         </StackPanel>
       </Grid>
     </Border>

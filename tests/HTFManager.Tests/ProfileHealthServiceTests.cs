@@ -76,6 +76,26 @@ public sealed class ProfileHealthServiceTests
         Assert.Equal(ProfileHealthMatchKind.ResolvedId, item.MatchKind);
     }
 
+
+    [Fact]
+    public void LocalIntrinsicRequirement_DoesNotTakeOverProviderBackedInstalledMod()
+    {
+        var expectation = TestData.Expectation(
+            packageKey: null,
+            intrinsicId: "com.example.shared",
+            resolvedModId: null);
+        var providerInstalled = TestData.Installed(
+            "provider",
+            packageKey: "Author-ProviderMod",
+            intrinsicId: "com.example.shared",
+            source: ModSourceType.Thunderstore);
+
+        var item = Assert.Single(_service.Evaluate(Profile(expectation), new[] { providerInstalled }).Items);
+
+        Assert.Equal(ProfileHealthStatus.Missing, item.Status);
+        Assert.Equal(ProfileHealthMatchKind.None, item.MatchKind);
+    }
+
     [Fact]
     public void AmbiguousLocalIdentity_IsIdentityUncertain()
     {

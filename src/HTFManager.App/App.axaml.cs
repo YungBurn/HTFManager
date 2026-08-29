@@ -11,6 +11,7 @@ using HTFManager.Infrastructure.Storage;
 using HTFManager.Infrastructure.System;
 using HTFManager.Infrastructure.Thunderstore;
 using HTFManager.Infrastructure.Configuration;
+using HTFManager.Infrastructure.Updates;
 
 namespace HTFManager.App;
 
@@ -30,14 +31,17 @@ public partial class App : Application
         var registry = new ModRegistryStore(settingsStore.DataDirectory);
         var loaderRegistry = new LoaderRegistryStore(settingsStore.DataDirectory);
         var modService = new ModService(registry);
-        var packageService = new ModPackageService(registry, settingsStore.DataDirectory);
         var artifactStore = new PackageArtifactStore(registry, settingsStore.DataDirectory);
+        var packageService = new ModPackageService(registry, settingsStore.DataDirectory, artifactStore);
         var catalogService = new ThunderstoreCatalogService(settingsStore.DataDirectory);
         var loaderSetupService = new LoaderSetupService(loaderRegistry, settingsStore.DataDirectory);
         var configurationService = new ConfigurationService(settingsStore.DataDirectory);
         var profileService = new ProfileService(settingsStore);
         var profileHealthService = new ProfileHealthService();
         var profileBundleService = new ProfileBundleService(profileService, profileHealthService, artifactStore, settingsStore.DataDirectory);
+        var reconciliationService = new ProfileVersionReconciliationService(profileHealthService, artifactStore);
+        var updateService = new GitHubReleaseUpdateService(settingsStore.DataDirectory);
+        var updateApplier = new WindowsApplicationUpdateApplier();
 
         Services = new AppServices(
             settingsStore,
@@ -54,6 +58,10 @@ public partial class App : Application
             new ProfileRestoreService(),
             profileHealthService,
             profileBundleService,
+            reconciliationService,
+            artifactStore,
+            updateService,
+            updateApplier,
             new SystemShell(),
             new GameLauncher());
 
