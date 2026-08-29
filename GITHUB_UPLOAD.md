@@ -1,4 +1,4 @@
-# First source upload to YungBurn/HTFManager
+# Publishing HTF Manager v0.3.6 to GitHub
 
 Repository:
 
@@ -6,87 +6,136 @@ Repository:
 https://github.com/YungBurn/HTFManager
 ```
 
-The remote repository already has a `main` branch. Preserve that history instead of force-pushing over it.
+Current development branch:
 
-## Recommended first upload from the existing project folder
-
-Open PowerShell in the HTFManager source root.
-
-First confirm the project still builds:
-
-```powershell
-dotnet build HTFManager.slnx
+```text
+feature/v0.3.6-profile-restore-assistant
 ```
 
-Then check whether the folder is already a Git repository:
+The recommended release workflow is **feature branch → GitHub Pull Request → main → annotated tag**. Do not force-push `main`.
+
+## 1. Apply the v0.3.6 release-state files
+
+Copy the GitHub release/finalization file package into the repository root so `VERSION`, release notes, handoff documents, architecture metadata, visible app version, and export metadata all report v0.3.6.
+
+## 2. Re-run the verified build
+
+From the repository root:
 
 ```powershell
-git status
+dotnet restore HTFManager.slnx
+dotnet build HTFManager.slnx --configuration Release --no-restore
+dotnet run --project .\src\HTFManager.App\HTFManager.App.csproj
 ```
 
-If Git reports that this is **not** a repository, initialize it and attach the existing remote history:
+The currently known baseline emits three non-blocking Avalonia `AVLN3001` warnings for `LoaderSetupDialog`, `PackageInspectorDialog`, and `ProfileImportDialog`. A successful build and application startup remain required.
 
-```powershell
-git init
-git remote add origin https://github.com/YungBurn/HTFManager.git
-git fetch origin
-git checkout -B main origin/main
-```
-
-Because the existing remote currently contains the repository history (including its LICENSE), this starts the local `main` branch from the remote `main` commit while leaving unrelated local source files available to add.
-
-Now inspect exactly what will be committed:
+## 3. Review exactly what will be committed
 
 ```powershell
 git status --short
+git diff --check
+git diff --stat
+```
+
+Confirm that the changes do not include:
+
+- `bin/` or `obj/`;
+- publish output;
+- game files;
+- downloaded Mod or loader binaries;
+- `%LOCALAPPDATA%\HTFManager` data;
+- personal test profiles/configuration;
+- cache/download directories.
+
+## 4. Stage and commit v0.3.6
+
+```powershell
 git add .
+git diff --cached --check
 git status --short
+git commit -m "Add v0.3.6 Profile Restore Assistant"
 ```
 
-Before committing, verify that the staged list does **not** contain `bin/`, `obj/`, game files, BepInEx/MelonLoader runtime binaries, downloaded Mod packages, local cache or `%LOCALAPPDATA%` data.
+Review `git status` after the commit; the working tree should be clean.
 
-Commit and push:
+## 5. Push the feature branch
 
 ```powershell
-git commit -m "Add HTF Manager v0.3.5.1 source baseline"
-git push -u origin main
+git push -u origin feature/v0.3.6-profile-restore-assistant
 ```
 
-After GitHub receives the commit, open the Actions tab and confirm the `Build` workflow succeeds.
+Do not push directly over `main` and do not use `--force`.
 
-## If the local folder is already a Git repository
+## 6. Open the Pull Request
 
-Do not run `git init` again. Check remotes:
+On GitHub create a Pull Request:
+
+```text
+base:    main
+compare: feature/v0.3.6-profile-restore-assistant
+```
+
+Suggested title:
+
+```text
+HTF Manager v0.3.6 — Profile Restore Assistant
+```
+
+Suggested summary:
+
+```text
+- adds deterministic restore planning for missing portable-profile requirements
+- restores supported Thunderstore requirements through existing Package Inspector/install pipeline
+- requires explicit acknowledgement for version fallback
+- re-matches profiles after successful restoration
+- adds HTF Manager application/taskbar logo
+- promotes the verified development baseline to v0.3.6
+```
+
+Wait for the GitHub Actions build to pass before merging.
+
+## 7. Merge to main
+
+Use the normal GitHub merge flow. After the PR is merged, synchronize local `main`:
 
 ```powershell
-git remote -v
+git checkout main
+git pull --ff-only origin main
 ```
 
-If `origin` is missing:
+Confirm the release commit is present:
 
 ```powershell
-git remote add origin https://github.com/YungBurn/HTFManager.git
+git log --oneline --decorate -n 10
 ```
 
-Then fetch and inspect history before pushing:
+## 8. Tag v0.3.6
+
+Only tag after `main` contains the merged, green v0.3.6 build:
 
 ```powershell
-git fetch origin
-git status
-git log --oneline --decorate --graph --all -n 20
+git tag -a v0.3.6 -m "HTF Manager v0.3.6 - Profile Restore Assistant"
+git push origin v0.3.6
 ```
 
-If the local history was created independently from the GitHub repository, merge the remote history rather than force-pushing:
+A GitHub Release can then be created from tag `v0.3.6`, using `PATCH_NOTES_v0.3.6.md` as the release-note source.
+
+## 9. Start v0.3.7 development
+
+After `main` and tag `v0.3.6` are confirmed:
 
 ```powershell
-git branch -M main
-git merge origin/main --allow-unrelated-histories
+git checkout main
+git pull --ff-only origin main
+git checkout -b feature/v0.3.7-profile-health-version-reconciliation
+git push -u origin feature/v0.3.7-profile-health-version-reconciliation
 ```
 
-Resolve any real file conflicts, build again, commit the merge if necessary, and then:
+The planned scope is documented in:
 
-```powershell
-git push -u origin main
+```text
+docs/V0.3.7_PROFILE_HEALTH_AND_VERSION_RECONCILIATION.md
 ```
 
-Avoid `git push --force` for the initial source upload.
+Keep the first v0.3.7 implementation patch focused on the expectation/health data model and read-only health calculation before adding repair UI or provider work.

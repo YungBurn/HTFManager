@@ -1,0 +1,89 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="HTFManager.App.Views.Dialogs.ProfileRestoreDialog"
+        Width="900" Height="720" MinWidth="780" MinHeight="620"
+        CanResize="True" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Brush.Window}"
+        Icon="/Assets/AppIcon.ico"
+        Title="HTF Manager">
+  <Grid RowDefinitions="Auto,Auto,*,Auto">
+    <StackPanel Margin="26,24,26,16" Spacing="6">
+      <TextBlock Text="{DynamicResource Restore.Title}" FontSize="22" FontWeight="SemiBold" />
+      <TextBlock x:Name="ProfileNameText" Classes="secondary" FontSize="12" />
+      <TextBlock Text="{DynamicResource Restore.Subtitle}" Classes="secondary" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <Grid Grid.Row="1" Margin="26,0,26,16" ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+      <Border Classes="card" Padding="12">
+        <StackPanel Spacing="3">
+          <TextBlock Text="{DynamicResource Restore.Ready}" Classes="secondary" FontSize="10" />
+          <TextBlock x:Name="ReadyCountText" FontSize="20" FontWeight="SemiBold" />
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="1" Classes="card" Padding="12">
+        <StackPanel Spacing="3">
+          <TextBlock Text="{DynamicResource Restore.VersionFallback}" Classes="secondary" FontSize="10" />
+          <TextBlock x:Name="FallbackCountText" FontSize="20" FontWeight="SemiBold" />
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="2" Classes="card" Padding="12">
+        <StackPanel Spacing="3">
+          <TextBlock Text="{DynamicResource Restore.Unavailable}" Classes="secondary" FontSize="10" />
+          <TextBlock x:Name="UnavailableCountText" FontSize="20" FontWeight="SemiBold" />
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="3" Classes="card" Padding="12">
+        <StackPanel Spacing="3">
+          <TextBlock Text="{DynamicResource Restore.Manual}" Classes="secondary" FontSize="10" />
+          <TextBlock x:Name="ManualCountText" FontSize="20" FontWeight="SemiBold" />
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <Grid Grid.Row="2" Margin="26,0,26,18">
+      <Border x:Name="LoadingPanel" Classes="card" IsVisible="True">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" Margin="20">
+          <ProgressBar IsIndeterminate="True" Width="240" />
+          <TextBlock x:Name="LoadingText" Text="{DynamicResource Restore.Loading}" Classes="secondary" HorizontalAlignment="Center" />
+        </StackPanel>
+      </Border>
+
+      <Border x:Name="CatalogErrorPanel" Classes="card" BorderBrush="{DynamicResource Brush.Error}" IsVisible="False">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Margin="28" MaxWidth="560">
+          <PathIcon Data="{StaticResource Icon.Warning}" Width="30" Height="30" Foreground="{DynamicResource Brush.Error}" />
+          <TextBlock Text="{DynamicResource Restore.CatalogErrorTitle}" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
+          <TextBlock Text="{DynamicResource Restore.CatalogErrorDescription}" Classes="secondary" TextWrapping="Wrap" TextAlignment="Center" />
+          <Button Classes="secondary" Click="RetryCatalog_Click">
+            <TextBlock Text="{DynamicResource Common.Retry}" />
+          </Button>
+        </StackPanel>
+      </Border>
+
+      <Border x:Name="CompletePanel" Classes="card" BorderBrush="{DynamicResource Brush.Success}" IsVisible="False">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" Margin="28" MaxWidth="580">
+          <PathIcon Data="{StaticResource Icon.Check}" Width="32" Height="32" Foreground="{DynamicResource Brush.Success}" />
+          <TextBlock Text="{DynamicResource Restore.CompleteTitle}" FontSize="19" FontWeight="SemiBold" HorizontalAlignment="Center" />
+          <TextBlock Text="{DynamicResource Restore.CompleteDescription}" Classes="secondary" TextWrapping="Wrap" TextAlignment="Center" />
+        </StackPanel>
+      </Border>
+
+      <Border x:Name="PlanPanel" Classes="card" Padding="10" IsVisible="False">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel x:Name="ItemsList" Spacing="8" />
+        </ScrollViewer>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="3" Background="{DynamicResource Brush.Sidebar}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" Padding="22,14">
+      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+        <TextBlock x:Name="FooterStatusText" Classes="secondary" VerticalAlignment="Center" TextWrapping="Wrap" />
+        <Button x:Name="ResolveAgainButton" Grid.Column="1" Classes="secondary" Click="ResolveAgain_Click">
+          <TextBlock Text="{DynamicResource Profiles.ResolveMissing}" />
+        </Button>
+        <Button Grid.Column="2" Classes="secondary" Click="Close_Click" MinWidth="88">
+          <TextBlock Text="{DynamicResource Common.Close}" />
+        </Button>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

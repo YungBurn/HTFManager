@@ -47,6 +47,7 @@ public partial class App : Application
             loaderSetupService,
             configurationService,
             new ProfileService(settingsStore),
+            new ProfileRestoreService(),
             new SystemShell(),
             new GameLauncher());
 

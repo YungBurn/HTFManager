@@ -504,6 +504,21 @@ public partial class ProfilesView : UserControl
             FontWeight = FontWeight.SemiBold,
             FontSize = 12
         };
+        var restore = new Button
+        {
+            Content = App.Services.Localization.Get("Profiles.RestoreMissing"),
+            MinWidth = 128,
+            IsEnabled = !App.Services.IsBusy
+        };
+        restore.Classes.Add("primary");
+        restore.Click += async (_, _) =>
+        {
+            _deleteArmedProfileName = null;
+            _clearSnapshotArmedProfileName = null;
+            if (TopLevel.GetTopLevel(this) is Window owner)
+                await ProfileRestoreDialog.ShowAsync(owner, profile);
+        };
+
         var resolve = new Button
         {
             Content = App.Services.Localization.Get("Profiles.ResolveMissing"),
@@ -513,9 +528,11 @@ public partial class ProfilesView : UserControl
         resolve.Classes.Add("secondary");
         resolve.Click += (_, _) => App.Services.ResolveMissingProfileMods(profile);
 
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 8 };
         header.Children.Add(title);
-        Grid.SetColumn(resolve, 1);
+        Grid.SetColumn(restore, 1);
+        header.Children.Add(restore);
+        Grid.SetColumn(resolve, 2);
         header.Children.Add(resolve);
 
         var list = new StackPanel { Spacing = 5 };

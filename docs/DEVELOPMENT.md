@@ -45,11 +45,11 @@ When a stable baseline changes, update:
 - relevant patch notes
 - visible application version when appropriate
 
-## Feature patch workflow
+## Incremental feature package workflow
 
-Prefer small, baseline-specific patches. A feature patch should identify the version it expects and avoid copying unrelated generated files.
+For local-first development, prefer small baseline-specific ZIP overlays containing only new or changed repository files. Do not include `bin/`, `obj/`, caches, game/runtime data, or unchanged source files. A package should identify the baseline it expects.
 
-Before distributing a patch:
+Before distributing a package:
 
 ```powershell
 dotnet restore HTFManager.slnx

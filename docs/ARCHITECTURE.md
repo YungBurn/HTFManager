@@ -1,4 +1,4 @@
-# HTF Manager Architecture — v0.3.5.1
+# HTF Manager Architecture — v0.3.6
 
 ## 1. Design goals
 
@@ -186,7 +186,28 @@ Missing Mods become unresolved profile requirements. Profiles with unresolved re
 
 Portable profiles never bundle third-party Mod binaries, loader runtimes or game files.
 
-## 11. Local manager data
+## 11. Profile Restore Assistant
+
+v0.3.6 adds a restoration orchestration layer for unresolved portable-profile requirements. The planner is read-only and classifies each unresolved requirement as `Ready`, `VersionFallback`, `PackageUnavailable`, or `ManualRequired`.
+
+Automatic resolution is intentionally limited to exact Thunderstore `PackageKey` matches. When a requested version is available it is selected directly; when only another downloadable version is available the item is marked as `VersionFallback` and requires explicit acknowledgement. The planner never guesses a package from display text.
+
+Installable candidates reuse the existing remote preparation and Package Inspector path:
+
+```text
+Profile unresolved requirement
+→ ProfileRestoreService plan
+→ exact Thunderstore package/version candidate
+→ Package Inspector
+→ existing dependency/conflict checks
+→ existing transactional install
+→ refresh local Mods
+→ ResolveMissingMods
+```
+
+Restore Assistant does not automatically apply the profile after restoration completes.
+
+## 12. Local manager data
 
 HTF Manager stores its own state under:
 
@@ -198,14 +219,18 @@ The game directory is not used as the manager's database.
 
 Data categories include settings, profiles, Mod/loader ownership records, caches, backups, profile snapshots and recovery transactions.
 
-## 12. Repository and patch discipline
+## 13. Repository and incremental-package discipline
 
-`main` is the stable development baseline. Before starting a feature patch, record the required baseline version. New patches should contain only changed/new source files plus patch notes.
+`main` is the stable development baseline. Before starting a feature step, record the required baseline version. Local development packages should be ZIP overlays containing only changed/new repository files plus the relevant notes; unchanged source and generated output should not be duplicated.
 
 `VERSION`, `PROJECT_STATE.json` and `SESSION_HANDOFF.md` should be updated whenever the stable baseline changes.
 
 Generated build output, game files, downloaded loader/Mod binaries and local application data do not belong in Git.
 
-## 13. Planned next subsystem
+## 14. Planned next subsystem
 
-v0.3.6 should add a Profile Restore Assistant that consumes unresolved requirements produced by portable-profile import and resolves supported Thunderstore references through the existing installation pipeline. It should not introduce another installation engine.
+v0.3.7 should add **Profile Health & Version Reconciliation**. The key gap is that the current matcher accepts an installed Mod with the same trusted identity even when its version differs from the portable-profile requirement; after import that expected version is not retained for already-resolved members.
+
+v0.3.7 should preserve expected identity/version metadata for resolved profile members, compute profile health without mutating the installation, surface version drift explicitly, and only then add a safe reconciliation path for supported managed Thunderstore Mods through the existing Package Inspector/update ownership flow.
+
+Nexus support remains a later provider integration rather than being embedded into profile health or matching logic.
