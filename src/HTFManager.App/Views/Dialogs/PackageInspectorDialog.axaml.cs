@@ -77,7 +77,11 @@ public partial class PackageInspectorDialog : Window
         });
 
         ModeText.Text = _prepared.IsVersionReconciliation
-            ? $"{App.Services.Localization.Get("Inspector.ReconcileMode")}: {i.ExistingVersion ?? "—"} → {i.Version}"
+            ? string.Format(
+                App.Services.Localization.Get("Inspector.ReconcileModeWithSource"),
+                ReconciliationSourceLabel(_prepared.ReconciliationSource),
+                i.ExistingVersion ?? "—",
+                i.Version)
             : i.IsUpgrade
                 ? $"{App.Services.Localization.Get("Inspector.UpdateMode")}: {i.ExistingVersion ?? "—"} → {i.Version}"
                 : App.Services.Localization.Get("Inspector.InstallMode");
@@ -136,6 +140,7 @@ public partial class PackageInspectorDialog : Window
             RemotePackage = _prepared.RemotePackage,
             TemporaryDirectory = _prepared.TemporaryDirectory,
             IsVersionReconciliation = _prepared.IsVersionReconciliation,
+            ReconciliationSource = _prepared.ReconciliationSource,
             Inspection = refreshed
         };
         Render();
@@ -157,6 +162,7 @@ public partial class PackageInspectorDialog : Window
                 RemotePackage = _prepared.RemotePackage,
                 TemporaryDirectory = _prepared.TemporaryDirectory,
                 IsVersionReconciliation = _prepared.IsVersionReconciliation,
+                ReconciliationSource = _prepared.ReconciliationSource,
                 Inspection = refreshed
             };
             Render();
@@ -164,6 +170,16 @@ public partial class PackageInspectorDialog : Window
     }
 
     private void Cancel_Click(object? sender, RoutedEventArgs e) => Close(false);
+
+    private static string ReconciliationSourceLabel(ProfileVersionReconciliationSource source)
+        => App.Services.Localization.Get(source switch
+        {
+            ProfileVersionReconciliationSource.Bundle => "Inspector.ReconcileSource.Bundle",
+            ProfileVersionReconciliationSource.RetainedArtifact => "Inspector.ReconcileSource.Retained",
+            ProfileVersionReconciliationSource.Thunderstore => "Inspector.ReconcileSource.Thunderstore",
+            ProfileVersionReconciliationSource.CatalogRequired => "Inspector.ReconcileSource.Thunderstore",
+            _ => "Inspector.ReconcileSource.Manual"
+        });
 
     private static string LoaderLabel(ModLoaderKind loader) => loader switch
     {

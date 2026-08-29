@@ -128,6 +128,23 @@ public partial class SettingsView : UserControl
         LastCheckedText.Text = App.Services.Settings.LastUpdateCheckUtc is { } checkedAt
             ? checkedAt.ToLocalTime().ToString("g")
             : App.Services.Localization.Get("Settings.Never");
+        UpdateChannelText.Text = update.Manifest?.Channel ??
+            (!string.IsNullOrWhiteSpace(update.LatestVersion) ? "stable" : "—");
+        PublishedAtText.Text = update.PublishedAt is { } publishedAt
+            ? publishedAt.ToLocalTime().ToString("g")
+            : "—";
+        UpdateSizeText.Text = update.Manifest is { Size: > 0 } manifest
+            ? FormatSize(manifest.Size)
+            : "—";
+        VerificationText.Text = update.State switch
+        {
+            ApplicationUpdateState.Available => App.Services.Localization.Get("Settings.VerificationManifest"),
+            ApplicationUpdateState.Downloading => App.Services.Localization.Get("Settings.VerificationDownloading"),
+            ApplicationUpdateState.Ready => App.Services.Localization.Get("Settings.VerificationSha256"),
+            ApplicationUpdateState.Error when update.Manifest is not null => App.Services.Localization.Get("Settings.VerificationFailed"),
+            ApplicationUpdateState.UpToDate => App.Services.Localization.Get("Settings.VerificationNotRequired"),
+            _ => App.Services.Localization.Get("Settings.VerificationPending")
+        };
 
         UpdateStatusText.Text = update.State switch
         {
@@ -153,6 +170,13 @@ public partial class SettingsView : UserControl
         if (!App.Services.CanApplyApplicationUpdate(out var reason) && !string.IsNullOrWhiteSpace(reason))
             status += " " + App.Services.Localization.Get("Settings.UpdateApplyUnavailable") + ": " + reason;
         return status;
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes >= 1024 * 1024) return $"{bytes / 1024d / 1024d:0.##} MB";
+        if (bytes >= 1024) return $"{bytes / 1024d:0.##} KB";
+        return $"{bytes} B";
     }
 
     private void OpenData_Click(object? sender, RoutedEventArgs e)

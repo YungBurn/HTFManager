@@ -101,6 +101,21 @@ public sealed class ProfileVersionReconciliationTests
         Assert.True(item.CanRestoreExpected);
     }
 
+    [Fact]
+    public void BuildPlan_DoesNotOfferAcceptInstalledWhenLogicalSourceDiffers()
+    {
+        var profile = MismatchProfile(out _);
+        profile.ExpectedMods.Single().Requirement.Source = ModSourceType.Thunderstore;
+        var installed = TestData.Installed("installed", version: "2.0.0", source: ModSourceType.LocalArchive);
+        var service = new ProfileVersionReconciliationService(new ProfileHealthService(), new StubArtifacts());
+
+        var item = Assert.Single(service.BuildPlan(profile, new[] { installed }, Array.Empty<RemoteModPackage>()).Items);
+
+        Assert.Equal(ProfileHealthStatus.VersionMismatch, item.Health.Status);
+        Assert.False(item.InstalledSourceMatchesExpectation);
+        Assert.False(item.CanAcceptInstalled);
+    }
+
     private static ModProfile MismatchProfile(out InstalledMod installed)
     {
         installed = TestData.Installed("installed", version: "2.0.0");

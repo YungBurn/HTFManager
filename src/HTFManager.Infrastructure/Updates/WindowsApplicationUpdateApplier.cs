@@ -21,6 +21,18 @@ public sealed class WindowsApplicationUpdateApplier : IApplicationUpdateApplier
             reason = "The update has not been downloaded and verified.";
             return false;
         }
+        if (!Version.TryParse(NormalizeVersion(update.CurrentVersion), out var currentVersion) ||
+            !Version.TryParse(NormalizeVersion(update.LatestVersion), out var latestVersion) ||
+            latestVersion.CompareTo(currentVersion) <= 0)
+        {
+            reason = "The staged application version is not newer than the running version.";
+            return false;
+        }
+        if (!NormalizeVersion(update.Manifest.Version).Equals(NormalizeVersion(update.LatestVersion), StringComparison.OrdinalIgnoreCase))
+        {
+            reason = "The staged update manifest version does not match the selected release.";
+            return false;
+        }
         if (!string.IsNullOrEmpty(Assembly.GetEntryAssembly()?.Location))
         {
             reason = "Restart-and-update is available only from the published single-file HTF Manager executable.";
@@ -41,6 +53,19 @@ public sealed class WindowsApplicationUpdateApplier : IApplicationUpdateApplier
             return false;
         }
 
+        var staged = Path.GetFullPath(update.StagedPath);
+        if (Path.GetFullPath(processPath).Equals(staged, StringComparison.OrdinalIgnoreCase))
+        {
+            reason = "The staged update cannot be the running executable itself.";
+            return false;
+        }
+
+        if (update.Manifest.Size <= 0 || new FileInfo(staged).Length != update.Manifest.Size)
+        {
+            reason = "The staged update no longer matches the expected file size.";
+            return false;
+        }
+
         return true;
     }
 
@@ -53,8 +78,16 @@ public sealed class WindowsApplicationUpdateApplier : IApplicationUpdateApplier
         {
             var processPath = Path.GetFullPath(Environment.ProcessPath!);
             var staged = Path.GetFullPath(update.StagedPath!);
+            var manifest = update.Manifest!;
+
+            if (new FileInfo(staged).Length != manifest.Size)
+            {
+                error = "The staged update no longer matches its manifest size.";
+                return false;
+            }
+
             var actualHash = ComputeSha256(staged);
-            if (!actualHash.Equals(update.Manifest!.Sha256, StringComparison.OrdinalIgnoreCase))
+            if (!actualHash.Equals(manifest.Sha256, StringComparison.OrdinalIgnoreCase))
             {
                 error = "The staged update no longer matches its SHA-256 manifest.";
                 return false;
@@ -77,10 +110,13 @@ public sealed class WindowsApplicationUpdateApplier : IApplicationUpdateApplier
             startInfo.ArgumentList.Add("--staged");
             startInfo.ArgumentList.Add(staged);
             startInfo.ArgumentList.Add("--sha256");
-            startInfo.ArgumentList.Add(update.Manifest.Sha256);
+            startInfo.ArgumentList.Add(manifest.Sha256);
+            startInfo.ArgumentList.Add("--size");
+            startInfo.ArgumentList.Add(manifest.Size.ToString());
 
             if (Process.Start(startInfo) is null)
             {
+                TryDelete(hostPath);
                 error = "Failed to start the update host.";
                 return false;
             }
@@ -91,6 +127,13 @@ public sealed class WindowsApplicationUpdateApplier : IApplicationUpdateApplier
             error = ex.Message;
             return false;
         }
+    }
+
+    private static string NormalizeVersion(string? value)
+    {
+        var normalized = (value ?? "0.0.0").Trim();
+        if (normalized.StartsWith('v') || normalized.StartsWith('V')) normalized = normalized[1..];
+        return normalized;
     }
 
     private static bool CanWriteDirectory(string directory)
@@ -113,5 +156,10 @@ public sealed class WindowsApplicationUpdateApplier : IApplicationUpdateApplier
     {
         using var stream = File.OpenRead(path);
         return Convert.ToHexString(SHA256.HashData(stream));
+    }
+
+    private static void TryDelete(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); } catch { }
     }
 }

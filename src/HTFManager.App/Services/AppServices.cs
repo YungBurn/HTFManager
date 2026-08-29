@@ -727,7 +727,8 @@ public sealed class AppServices
             Inspection = prepared.Inspection,
             RemotePackage = prepared.RemotePackage,
             TemporaryDirectory = prepared.TemporaryDirectory,
-            IsVersionReconciliation = true
+            IsVersionReconciliation = true,
+            ReconciliationSource = item.Source
         };
     }
 
