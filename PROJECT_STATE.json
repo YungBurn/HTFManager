@@ -16,5 +16,5 @@
   "repository": "https://github.com/YungBurn/HTFManager",
   "defaultBranch": "main",
   "nextPlannedVersion": "0.3.7",
-  "nextPlannedFeature": "Profile Health & Version Reconciliation"
+  "nextPlannedFeature": "Portable Profile Bundle & Health"
 }
