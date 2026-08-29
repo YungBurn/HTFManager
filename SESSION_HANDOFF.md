@@ -5,8 +5,8 @@ This document is the preferred entry point when continuing development on a new 
 ## Current baseline
 
 - Project: **HTF Manager**
-- Current version: **v0.3.5.1**
-- Last verified state: `dotnet build HTFManager.slnx` succeeds and the application enters the UI.
+- Current version: **v0.3.6**
+- Last verified state: `dotnet restore`, Release `dotnet build`, and `dotnet run` succeed on Windows/.NET 10 and the application enters the UI.
 - Solution: `HTFManager.slnx`
 - App project: `src/HTFManager.App/HTFManager.App.csproj`
 - Target framework: `.NET 10` (`net10.0`)
@@ -102,6 +102,14 @@ Import validates ZIP paths, schema, limits, hashes and configuration-to-Mod asso
 
 v0.3.5.1 fixes the `PortableProfileManifest.ExportedWithVersion` compile-time self-reference introduced in v0.3.5.
 
+### Profile Restore Assistant
+
+v0.3.6 adds guided restoration for unresolved portable-profile requirements. Automatic planning is limited to exact Thunderstore `PackageKey` matches. Requested versions are preferred; unavailable requested versions become explicit `VersionFallback` items and require user acknowledgement before Package Inspector can be opened.
+
+Restore Assistant never installs silently. It reuses the existing Package Inspector/install pipeline, refreshes Mods after a successful install, re-runs `ResolveMissingMods`, and never automatically applies the profile. Local/external requirements remain manual.
+
+The application now also includes its custom HTF Manager logo for the executable, main window/taskbar, and sidebar header.
+
 ## Data locations
 
 HTF Manager state is stored under:
@@ -149,28 +157,37 @@ Other historical Avalonia/C# regressions to avoid:
 - use `PlaceholderText`, not obsolete `Watermark`;
 - namespace `HTFManager.Infrastructure.System` can shadow `System`; use `global::System...` when needed.
 
+## Known build warnings
+
+The verified v0.3.6 build currently reports three non-blocking Avalonia `AVLN3001` warnings for:
+
+- `LoaderSetupDialog.axaml`;
+- `PackageInspectorDialog.axaml`;
+- `ProfileImportDialog.axaml`.
+
+The application starts successfully and the verified dialog workflows are not blocked. Do not confuse these existing warnings with a new feature regression; investigate separately if runtime loader behavior changes.
+
 ## Next planned version
 
-### v0.3.6 — Profile Restore Assistant
+### v0.3.7 — Profile Health & Version Reconciliation
 
-Goal: turn an imported `.htfprofile` with missing requirements into a guided restoration plan.
+Goal: close the version-drift gap left intentionally by v0.3.6.
 
-Expected behavior:
+Current matching treats the same trusted Mod identity as resolved even when the installed version differs from the version recorded in the imported profile. v0.3.7 should preserve expected metadata for resolved members and compute a read-only health state before attempting any correction.
+
+Expected direction:
 
 ```text
-Portable profile
-→ match installed Mods
-→ classify missing requirements
-→ resolve supported Thunderstore PackageKeys
-→ show restoration/install plan
-→ install available requirements through existing Package Inspector pipeline
-→ re-match profile
-→ apply only when complete
+profile expectation metadata
+→ map to current installed Mod
+→ Healthy / Missing / VersionMismatch / IdentityUncertain
+→ show profile health
+→ for supported managed Thunderstore mismatches, explicitly inspect the expected version
+→ existing Package Inspector / ownership-safe replacement path
+→ refresh and re-check health
 ```
 
-Do not create a second Mod installer for this feature. Reuse the existing Thunderstore, Package Inspector, dependency/conflict, staging, rollback and ownership services.
-
-Nexus integration should remain a later provider/integration step rather than being embedded directly into profile logic.
+Do not silently downgrade/upgrade Mods. External/manual Mods must not be taken over just to satisfy a profile. Keep Nexus as a later provider-integration milestone. See `docs/V0.3.7_PROFILE_HEALTH_AND_VERSION_RECONCILIATION.md`.
 
 ## Cross-session workflow
 

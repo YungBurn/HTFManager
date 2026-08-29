@@ -31,6 +31,17 @@ public partial class PackageInspectorDialog : Window
         return await dialog.ShowDialog<bool>(owner);
     }
 
+    public static async Task<bool> ShowForRemoteAsync(
+        Window owner,
+        RemoteModPackage package,
+        RemoteModVersion version)
+    {
+        var prepared = await App.Services.PrepareRemotePackageAsync(package, version);
+        if (prepared is null) return false;
+        var dialog = new PackageInspectorDialog(prepared);
+        return await dialog.ShowDialog<bool>(owner);
+    }
+
     private void Render()
     {
         var i = _prepared.Inspection;

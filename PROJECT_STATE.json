@@ -1,7 +1,7 @@
 {
   "project": "HTFManager",
   "productName": "HTF Manager",
-  "version": "0.3.5.1",
+  "version": "0.3.6",
   "status": "stable-development-baseline",
   "buildVerified": true,
   "solution": "HTFManager.slnx",
@@ -15,6 +15,6 @@
   ],
   "repository": "https://github.com/YungBurn/HTFManager",
   "defaultBranch": "main",
-  "nextPlannedVersion": "0.3.6",
-  "nextPlannedFeature": "Profile Restore Assistant"
+  "nextPlannedVersion": "0.3.7",
+  "nextPlannedFeature": "Profile Health & Version Reconciliation"
 }

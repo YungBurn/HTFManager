@@ -3,6 +3,7 @@
         xmlns:panels="using:HTFManager.App.Views.Panels"
         x:Class="HTFManager.App.Views.MainWindow"
         Title="HTF Manager"
+        Icon="/Assets/AppIcon.ico"
         Width="1360" Height="820"
         MinWidth="1100" MinHeight="700"
         WindowStartupLocation="CenterScreen">
@@ -13,9 +14,14 @@
             BorderBrush="{DynamicResource Brush.Border}"
             BorderThickness="0,0,1,0">
       <Grid RowDefinitions="92,*,Auto">
-        <StackPanel Margin="20,22,16,12" Spacing="2">
-          <TextBlock Text="HTF" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Brush.Primary}" />
-          <TextBlock Text="MANAGER" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" LetterSpacing="1.8" />
+        <StackPanel Margin="20,18,16,12" Orientation="Horizontal" Spacing="12">
+          <Border Width="42" Height="42" CornerRadius="10" ClipToBounds="True" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+            <Image Source="/Assets/AppIcon.png" Stretch="UniformToFill" />
+          </Border>
+          <StackPanel VerticalAlignment="Center" Spacing="2">
+            <TextBlock Text="HTF" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Brush.Primary}" />
+            <TextBlock Text="MANAGER" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" LetterSpacing="1.8" />
+          </StackPanel>
         </StackPanel>
 
         <StackPanel Grid.Row="1" Margin="10,4" Spacing="3">
@@ -64,7 +70,7 @@
               <TextBlock Text="{DynamicResource Nav.Settings}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
-          <TextBlock Margin="14,0" Text="v0.3.5.1" FontSize="11" Foreground="{DynamicResource Brush.TextSecondary}" />
+          <TextBlock Margin="14,0" Text="v0.3.6" FontSize="11" Foreground="{DynamicResource Brush.TextSecondary}" />
         </StackPanel>
       </Grid>
     </Border>

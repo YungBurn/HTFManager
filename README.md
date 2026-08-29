@@ -1,4 +1,4 @@
-# HTF Manager v0.3.5.1
+# HTF Manager v0.3.6
 
 A lightweight, game-specific Mod Manager and launcher for **How to Fish (渔力全开)**.
 
@@ -20,6 +20,7 @@ HTF Manager is built with **.NET 10**, **C#**, and **Avalonia 12**. It is design
 - Save optional per-profile Mod configuration snapshots with recovery and rollback.
 - Export and import portable `.htfprofile` packages without redistributing Mod binaries or game files.
 - Detect missing or version-mismatched Mods when importing a portable profile.
+- Guide restoration of missing Thunderstore requirements through Profile Restore Assistant and the existing Package Inspector/install pipeline.
 
 ## Safety model
 
@@ -79,9 +80,9 @@ This includes settings, profiles, Mod/loader ownership records, caches, configur
 
 ## Current baseline
 
-**v0.3.5.1** is the current verified development baseline. It contains the v0.3.5 Portable Profiles feature plus the compile hotfix documented in [`PATCH_NOTES_v0.3.5.1.md`](PATCH_NOTES_v0.3.5.1.md).
+**v0.3.6** is the current verified development baseline. It adds the Profile Restore Assistant on top of portable profiles: unresolved Thunderstore requirements are planned by exact `PackageKey`, the requested version is preferred, fallbacks require explicit acknowledgement, and every install still passes through the existing Package Inspector and transactional install pipeline. See [`PATCH_NOTES_v0.3.6.md`](PATCH_NOTES_v0.3.6.md) and [`docs/V0.3.6_PROFILE_RESTORE_ASSISTANT.md`](docs/V0.3.6_PROFILE_RESTORE_ASSISTANT.md).
 
-The next planned development milestone is **v0.3.6 — Profile Restore Assistant**, which will use portable-profile metadata to resolve and restore missing supported Mods through the existing Package Inspector/install pipeline.
+The next planned development milestone is **v0.3.7 — Profile Health & Version Reconciliation**. It will preserve expected Mod metadata for resolved profile members, detect version drift that v0.3.6 intentionally treats as a match, and provide a safe path to reconcile supported Thunderstore versions without weakening Package Inspector or ownership rules.
 
 ## License
 

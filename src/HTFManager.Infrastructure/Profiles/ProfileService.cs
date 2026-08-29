@@ -16,7 +16,7 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
     private static readonly JsonSerializerOptions PortableJsonOptions = CreatePortableJsonOptions();
     private const string PortableFormat = "HTFManager.Profile";
     private const int PortableSchemaVersion = 1;
-    private const string ExportedWithVersion = "0.3.5.1";
+    private const string ExportedWithVersion = "0.3.6";
     private const long MaxPortableArchiveBytes = 32L * 1024L * 1024L;
     private const long MaxPortableConfigBytes = 4L * 1024L * 1024L;
 

@@ -17,6 +17,7 @@ public sealed class AppServices
     public ILoaderSetupService LoaderSetupService { get; }
     public IConfigurationService ConfigurationService { get; }
     public IProfileService ProfileService { get; }
+    public IProfileRestoreService ProfileRestoreService { get; }
     public ISystemShell Shell { get; }
     public IGameLauncher Launcher { get; }
 
@@ -46,6 +47,7 @@ public sealed class AppServices
         ILoaderSetupService loaderSetupService,
         IConfigurationService configurationService,
         IProfileService profileService,
+        IProfileRestoreService profileRestoreService,
         ISystemShell shell,
         IGameLauncher launcher)
     {
@@ -61,6 +63,7 @@ public sealed class AppServices
         LoaderSetupService = loaderSetupService;
         ConfigurationService = configurationService;
         ProfileService = profileService;
+        ProfileRestoreService = profileRestoreService;
         Shell = shell;
         Launcher = launcher;
 
@@ -239,15 +242,41 @@ public sealed class AppServices
         finally { SetBusy(false); }
     }
 
-    public async Task<PreparedModPackage?> PrepareRemotePackageAsync(RemoteModPackage package)
+    public Task<PreparedModPackage?> PrepareRemotePackageAsync(RemoteModPackage package)
+    {
+        if (!Environment.GameFound)
+        {
+            SetOperation(false, Localization.Get("Ops.EnvironmentNotReady"));
+            return Task.FromResult<PreparedModPackage?>(null);
+        }
+
+        var version = package.LatestVersion;
+        return version is null
+            ? Task.FromResult<PreparedModPackage?>(null)
+            : PrepareRemotePackageAsync(package, version);
+    }
+
+    public async Task<PreparedModPackage?> PrepareRemotePackageAsync(RemoteModPackage package, RemoteModVersion version)
     {
         if (!Environment.GameFound)
         {
             SetOperation(false, Localization.Get("Ops.EnvironmentNotReady"));
             return null;
         }
-        var version = package.LatestVersion;
-        if (version is null) return null;
+        var selectedVersion = package.Versions.FirstOrDefault(candidate =>
+            candidate.VersionNumber.Trim().Equals(version.VersionNumber.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (selectedVersion is null)
+        {
+            SetOperation(false, Localization.Get("Ops.InstallFailed") + ": selected version does not belong to this package");
+            return null;
+        }
+        version = selectedVersion;
+        if (string.IsNullOrWhiteSpace(version.DownloadUrl))
+        {
+            SetOperation(false, Localization.Get("Ops.InstallFailed") + ": selected version is not downloadable");
+            return null;
+        }
+
         SetBusy(true, Localization.Get("Ops.InspectingPackage"));
         try
         {
