@@ -72,7 +72,7 @@ build/                         Local development/release helper scripts
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for current subsystem boundaries and safety invariants.
 
-For continuing development in another ChatGPT session, start with [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) and [`PROJECT_STATE.json`](PROJECT_STATE.json).
+For continuing development, start with [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) and [`PROJECT_STATE.json`](PROJECT_STATE.json).
 
 ## Local application data
 
