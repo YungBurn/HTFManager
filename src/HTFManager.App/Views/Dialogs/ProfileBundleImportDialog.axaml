@@ -1,0 +1,43 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="HTFManager.App.Views.Dialogs.ProfileBundleImportDialog"
+        Width="760" Height="650" MinWidth="680" MinHeight="560"
+        CanResize="True" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Brush.Window}"
+        Icon="/Assets/AppIcon.ico"
+        Title="HTF Manager">
+  <Grid RowDefinitions="Auto,Auto,*,Auto">
+    <StackPanel Margin="26,24,26,16" Spacing="5">
+      <TextBlock Text="{DynamicResource BundleImport.Title}" FontSize="22" FontWeight="SemiBold" />
+      <TextBlock Text="{DynamicResource BundleImport.Subtitle}" Classes="secondary" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <StackPanel Grid.Row="1" Margin="26,0,26,16" Spacing="10">
+      <TextBox x:Name="ImportNameBox" TextChanged="ImportNameBox_TextChanged" />
+      <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="8">
+        <Border Classes="card" Padding="9"><StackPanel Spacing="2"><TextBlock Text="{DynamicResource Health.Healthy}" Classes="secondary" FontSize="9"/><TextBlock x:Name="HealthyCountText" FontSize="17" FontWeight="SemiBold"/></StackPanel></Border>
+        <Border Grid.Column="1" Classes="card" Padding="9"><StackPanel Spacing="2"><TextBlock Text="{DynamicResource BundleImport.BundledMissing}" Classes="secondary" FontSize="9"/><TextBlock x:Name="BundledCountText" FontSize="17" FontWeight="SemiBold"/></StackPanel></Border>
+        <Border Grid.Column="2" Classes="card" Padding="9"><StackPanel Spacing="2"><TextBlock Text="{DynamicResource BundleImport.RemoteMissing}" Classes="secondary" FontSize="9"/><TextBlock x:Name="RemoteCountText" FontSize="17" FontWeight="SemiBold"/></StackPanel></Border>
+        <Border Grid.Column="3" Classes="card" Padding="9"><StackPanel Spacing="2"><TextBlock Text="{DynamicResource Health.VersionMismatch}" Classes="secondary" FontSize="9"/><TextBlock x:Name="VersionCountText" FontSize="17" FontWeight="SemiBold"/></StackPanel></Border>
+        <Border Grid.Column="4" Classes="card" Padding="9"><StackPanel Spacing="2"><TextBlock Text="{DynamicResource Health.Uncertain}" Classes="secondary" FontSize="9"/><TextBlock x:Name="UncertainCountText" FontSize="17" FontWeight="SemiBold"/></StackPanel></Border>
+      </Grid>
+      <CheckBox x:Name="OpenRestoreCheck" IsChecked="True">
+        <TextBlock Text="{DynamicResource BundleImport.OpenRestore}" FontSize="11" TextWrapping="Wrap" />
+      </CheckBox>
+    </StackPanel>
+
+    <Border Grid.Row="2" Margin="26,0,26,18" Classes="card" Padding="10">
+      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel x:Name="ItemsList" Spacing="7" />
+      </ScrollViewer>
+    </Border>
+
+    <Border Grid.Row="3" Background="{DynamicResource Brush.Sidebar}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" Padding="22,14">
+      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+        <TextBlock Text="{DynamicResource BundleImport.SafetyNote}" Foreground="{DynamicResource Brush.Warning}" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap" />
+        <Button Grid.Column="1" Classes="secondary" Click="Cancel_Click" MinWidth="88"><TextBlock Text="{DynamicResource Common.Cancel}"/></Button>
+        <Button x:Name="ImportButton" Grid.Column="2" Classes="primary" Click="Import_Click" MinWidth="110"><TextBlock Text="{DynamicResource BundleImport.Import}"/></Button>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

@@ -9,6 +9,7 @@ public sealed class ModInstallationRecord
     public string Author { get; set; } = "Unknown";
     public string Description { get; set; } = "";
     public string? PackageKey { get; set; }
+    public string? IntrinsicId { get; set; }
     public ModSourceType Source { get; set; } = ModSourceType.LocalArchive;
     public ModPackageKind Kind { get; set; } = ModPackageKind.Unknown;
     public ModLoaderKind Loader { get; set; } = ModLoaderKind.Unknown;

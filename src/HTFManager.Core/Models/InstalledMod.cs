@@ -13,6 +13,7 @@ public sealed class InstalledMod
     public bool IsManaged { get; init; }
     public string? RegistryId { get; init; }
     public string? PackageKey { get; init; }
+    public string? IntrinsicId { get; init; }
     public ModSourceType Source { get; init; } = ModSourceType.External;
     public ModPackageKind Kind { get; init; } = ModPackageKind.Unknown;
     public ModLoaderKind Loader { get; init; } = ModLoaderKind.Unknown;

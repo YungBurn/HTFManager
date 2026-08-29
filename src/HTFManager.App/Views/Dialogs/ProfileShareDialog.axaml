@@ -1,0 +1,57 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="HTFManager.App.Views.Dialogs.ProfileShareDialog"
+        Width="640" Height="560" MinWidth="580" MinHeight="500"
+        CanResize="False" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Brush.Window}"
+        Icon="/Assets/AppIcon.ico"
+        Title="HTF Manager">
+  <Grid RowDefinitions="Auto,*,Auto">
+    <StackPanel Margin="26,24,26,16" Spacing="5">
+      <TextBlock Text="{DynamicResource Share.Title}" FontSize="22" FontWeight="SemiBold" />
+      <TextBlock x:Name="ProfileNameText" Classes="secondary" />
+      <TextBlock Text="{DynamicResource Share.Subtitle}" Classes="secondary" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <ScrollViewer Grid.Row="1" Margin="26,0,26,18" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="12">
+        <Border Classes="card" Padding="14">
+          <RadioButton x:Name="LightweightRadio" GroupName="ShareMode" IsChecked="True">
+            <StackPanel Margin="8,0,0,0" Spacing="4">
+              <TextBlock Text="{DynamicResource Share.Lightweight}" FontWeight="SemiBold" FontSize="14" />
+              <TextBlock Text="{DynamicResource Share.LightweightDescription}" Classes="secondary" TextWrapping="Wrap" />
+              <TextBlock Text=".htfprofile" Foreground="{DynamicResource Brush.Primary}" FontSize="10" />
+            </StackPanel>
+          </RadioButton>
+        </Border>
+
+        <Border Classes="card" Padding="14">
+          <RadioButton x:Name="FullRadio" GroupName="ShareMode">
+            <StackPanel Margin="8,0,0,0" Spacing="4">
+              <TextBlock Text="{DynamicResource Share.Full}" FontWeight="SemiBold" FontSize="14" />
+              <TextBlock Text="{DynamicResource Share.FullDescription}" Classes="secondary" TextWrapping="Wrap" />
+              <TextBlock Text=".htfbundle" Foreground="{DynamicResource Brush.Primary}" FontSize="10" />
+            </StackPanel>
+          </RadioButton>
+        </Border>
+
+        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+          <Border Classes="card" Padding="10"><StackPanel Spacing="2"><TextBlock Text="{DynamicResource Share.Bundled}" Classes="secondary" FontSize="9"/><TextBlock x:Name="BundledCountText" FontSize="17" FontWeight="SemiBold"/></StackPanel></Border>
+          <Border Grid.Column="1" Classes="card" Padding="10"><StackPanel Spacing="2"><TextBlock Text="{DynamicResource Share.RemoteOnly}" Classes="secondary" FontSize="9"/><TextBlock x:Name="RemoteCountText" FontSize="17" FontWeight="SemiBold"/></StackPanel></Border>
+          <Border Grid.Column="2" Classes="card" Padding="10"><StackPanel Spacing="2"><TextBlock Text="{DynamicResource Share.Manual}" Classes="secondary" FontSize="9"/><TextBlock x:Name="ManualCountText" FontSize="17" FontWeight="SemiBold"/></StackPanel></Border>
+          <Border Grid.Column="3" Classes="card" Padding="10"><StackPanel Spacing="2"><TextBlock Text="{DynamicResource Share.VersionDrift}" Classes="secondary" FontSize="9"/><TextBlock x:Name="DriftCountText" FontSize="17" FontWeight="SemiBold"/></StackPanel></Border>
+        </Grid>
+        <TextBlock x:Name="EstimatedSizeText" Classes="secondary" TextWrapping="Wrap" />
+        <TextBlock Text="{DynamicResource Share.SafetyNote}" Foreground="{DynamicResource Brush.Warning}" FontSize="10" TextWrapping="Wrap" />
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border Grid.Row="2" Background="{DynamicResource Brush.Sidebar}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" Padding="22,14">
+      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+        <TextBlock Text="{DynamicResource Share.Footer}" Classes="secondary" VerticalAlignment="Center" TextWrapping="Wrap" />
+        <Button Grid.Column="1" Classes="secondary" Click="Cancel_Click" MinWidth="88"><TextBlock Text="{DynamicResource Common.Cancel}"/></Button>
+        <Button Grid.Column="2" Classes="primary" Click="Continue_Click" MinWidth="96"><TextBlock Text="{DynamicResource Share.Continue}"/></Button>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

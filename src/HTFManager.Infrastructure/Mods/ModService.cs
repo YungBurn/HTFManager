@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Text.Json;
 using HTFManager.Core.Interfaces;
 using HTFManager.Core.Models;
@@ -155,19 +154,46 @@ public sealed class ModService : IModService
                       ?? loadableDlls.Select(p => p + ".disabled").FirstOrDefault(File.Exists)
                       ?? DefaultRoot(gameDirectory, loader, component);
 
+        var displayName = record.Name;
+        var version = record.Version;
+        var intrinsicId = record.IntrinsicId;
+        if (string.IsNullOrWhiteSpace(record.PackageKey) &&
+            (string.IsNullOrWhiteSpace(intrinsicId) || VersionUnknown(version)))
+        {
+            var intrinsicCandidates = loadableDlls
+                .Select(path => File.Exists(path) ? path : path + ".disabled")
+                .Where(File.Exists)
+                .Select(path => TryInspectIntrinsic(path))
+                .Where(info => info is not null && !string.IsNullOrWhiteSpace(info.IntrinsicId))
+                .Select(info => info!)
+                .GroupBy(info => info.IntrinsicId!, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            if (intrinsicCandidates.Length == 1)
+            {
+                var inferred = intrinsicCandidates[0].First();
+                intrinsicId ??= inferred.IntrinsicId;
+                if (VersionUnknown(version) && !VersionUnknown(inferred.Version))
+                    version = inferred.Version;
+                if (!string.IsNullOrWhiteSpace(inferred.DisplayName))
+                    displayName = inferred.DisplayName;
+            }
+        }
+
         return new InstalledMod
         {
             Id = "managed:" + record.Id,
             RegistryId = record.Id,
-            Name = record.Name,
+            Name = displayName,
             FilePath = primary,
-            Version = record.Version,
+            Version = version,
             Author = record.Author,
             Description = record.Description,
             Enabled = enabled,
             IsExternal = false,
             IsManaged = true,
             PackageKey = record.PackageKey,
+            IntrinsicId = intrinsicId,
             Source = record.Source,
             Kind = record.Kind,
             Loader = loader,
@@ -177,6 +203,22 @@ public sealed class ModService : IModService
                 .ToArray()
         };
     }
+
+    private static ManagedAssemblyInfo? TryInspectIntrinsic(string path)
+    {
+        try
+        {
+            var analysis = ManagedAssemblyInspector.Inspect(path);
+            return analysis.IsManaged && analysis.Loader != ModLoaderKind.Unknown ? analysis : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool VersionUnknown(string? version)
+        => string.IsNullOrWhiteSpace(version) || version == "—";
 
     private static InstalledMod CreateExternalMod(
         string root,
@@ -195,12 +237,17 @@ public sealed class ModService : IModService
             .Replace(".dll.disabled", "", StringComparison.OrdinalIgnoreCase)
             .Replace(".dll", "", StringComparison.OrdinalIgnoreCase);
         var version = "—";
+        string? intrinsicId = null;
 
         try
         {
-            var assemblyName = AssemblyName.GetAssemblyName(file);
-            displayName = assemblyName.Name ?? displayName;
-            version = assemblyName.Version?.ToString() ?? "—";
+            var analysis = ManagedAssemblyInspector.Inspect(file);
+            if (analysis.IsManaged)
+            {
+                displayName = string.IsNullOrWhiteSpace(analysis.DisplayName) ? displayName : analysis.DisplayName;
+                version = string.IsNullOrWhiteSpace(analysis.Version) ? "—" : analysis.Version;
+                intrinsicId = analysis.IntrinsicId;
+            }
         }
         catch { }
 
@@ -218,6 +265,7 @@ public sealed class ModService : IModService
             Enabled = enabled,
             IsExternal = true,
             IsManaged = false,
+            IntrinsicId = intrinsicId,
             Source = ModSourceType.External,
             Kind = kind,
             Loader = loader,

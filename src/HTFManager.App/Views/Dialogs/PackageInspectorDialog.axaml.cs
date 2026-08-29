@@ -12,12 +12,25 @@ public partial class PackageInspectorDialog : Window
     {
         _prepared = prepared;
         InitializeComponent();
+        Closed += (_, _) => App.Services.CleanupPreparedPackage(_prepared);
         Render();
     }
 
     public static async Task<bool> ShowForLocalAsync(Window owner, string path)
     {
         var prepared = await App.Services.PrepareLocalPackageAsync(path);
+        if (prepared is null) return false;
+        var dialog = new PackageInspectorDialog(prepared);
+        return await dialog.ShowDialog<bool>(owner);
+    }
+
+    public static async Task<bool> ShowForBundledAsync(
+        Window owner,
+        string bundlePath,
+        HtfBundlePayloadDescriptor descriptor,
+        ProfileModRequirement requirement)
+    {
+        var prepared = await App.Services.PrepareBundledPackageAsync(bundlePath, descriptor, requirement);
         if (prepared is null) return false;
         var dialog = new PackageInspectorDialog(prepared);
         return await dialog.ShowDialog<bool>(owner);
@@ -117,6 +130,7 @@ public partial class PackageInspectorDialog : Window
             SourcePath = _prepared.SourcePath,
             Metadata = _prepared.Metadata,
             RemotePackage = _prepared.RemotePackage,
+            TemporaryDirectory = _prepared.TemporaryDirectory,
             Inspection = refreshed
         };
         Render();
@@ -136,6 +150,7 @@ public partial class PackageInspectorDialog : Window
                 SourcePath = _prepared.SourcePath,
                 Metadata = _prepared.Metadata,
                 RemotePackage = _prepared.RemotePackage,
+                TemporaryDirectory = _prepared.TemporaryDirectory,
                 Inspection = refreshed
             };
             Render();

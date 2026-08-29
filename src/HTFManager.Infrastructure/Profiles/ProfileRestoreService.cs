@@ -6,17 +6,28 @@ namespace HTFManager.Infrastructure.Profiles;
 public sealed class ProfileRestoreService : IProfileRestoreService
 {
     public ProfileRestorePlan BuildPlan(ModProfile profile, IReadOnlyList<RemoteModPackage> catalog)
+        => BuildPlan(profile, catalog, Array.Empty<HtfBundlePayloadDescriptor>(), catalogAvailable: true);
+
+    public ProfileRestorePlan BuildPlan(
+        ModProfile profile,
+        IReadOnlyList<RemoteModPackage> catalog,
+        IReadOnlyList<HtfBundlePayloadDescriptor> bundledPayloads,
+        bool catalogAvailable = true)
     {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(bundledPayloads);
 
         var packagesByKey = catalog
             .Where(package => !string.IsNullOrWhiteSpace(package.FullName))
             .GroupBy(package => package.FullName.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        var bundleByPortableId = bundledPayloads
+            .GroupBy(payload => payload.PortableId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
 
         var items = profile.UnresolvedMods
-            .Select(requirement => BuildItem(requirement, packagesByKey))
+            .Select(requirement => BuildItem(requirement, packagesByKey, bundleByPortableId, catalogAvailable))
             .ToArray();
 
         return new ProfileRestorePlan
@@ -28,8 +39,22 @@ public sealed class ProfileRestoreService : IProfileRestoreService
 
     private static ProfileRestoreItem BuildItem(
         ProfileModRequirement requirement,
-        IReadOnlyDictionary<string, RemoteModPackage> packagesByKey)
+        IReadOnlyDictionary<string, RemoteModPackage> packagesByKey,
+        IReadOnlyDictionary<string, HtfBundlePayloadDescriptor> bundleByPortableId,
+        bool catalogAvailable)
     {
+        if (bundleByPortableId.TryGetValue(requirement.PortableId, out var payload) && PayloadMatches(payload, requirement))
+        {
+            return new ProfileRestoreItem
+            {
+                Requirement = requirement,
+                Disposition = ProfileRestoreDisposition.Ready,
+                RestoreSource = ProfileRestoreSource.Bundle,
+                BundlePayload = payload,
+                Message = $"Exact expected version {payload.Version} is available in the portable bundle."
+            };
+        }
+
         if (requirement.Source != ModSourceType.Thunderstore)
         {
             return Manual(
@@ -43,6 +68,16 @@ public sealed class ProfileRestoreService : IProfileRestoreService
             return Manual(
                 requirement,
                 "This Thunderstore requirement has no package key. Automatic restore requires an exact PackageKey match.");
+        }
+
+        if (!catalogAvailable)
+        {
+            return new ProfileRestoreItem
+            {
+                Requirement = requirement,
+                Disposition = ProfileRestoreDisposition.CatalogUnavailable,
+                Message = "Thunderstore catalog is currently unavailable and no exact bundled payload was found."
+            };
         }
 
         if (!packagesByKey.TryGetValue(packageKey, out var package))
@@ -68,6 +103,7 @@ public sealed class ProfileRestoreService : IProfileRestoreService
                 {
                     Requirement = requirement,
                     Disposition = ProfileRestoreDisposition.Ready,
+                    RestoreSource = ProfileRestoreSource.Thunderstore,
                     RemotePackage = package,
                     SelectedVersion = exactVersion,
                     Message = BuildExactVersionMessage(package, exactVersion)
@@ -95,6 +131,7 @@ public sealed class ProfileRestoreService : IProfileRestoreService
             {
                 Requirement = requirement,
                 Disposition = ProfileRestoreDisposition.Ready,
+                RestoreSource = ProfileRestoreSource.Thunderstore,
                 RemotePackage = package,
                 SelectedVersion = fallback,
                 Message = BuildNoRequestedVersionMessage(package, fallback)
@@ -105,11 +142,23 @@ public sealed class ProfileRestoreService : IProfileRestoreService
         {
             Requirement = requirement,
             Disposition = ProfileRestoreDisposition.VersionFallback,
+            RestoreSource = ProfileRestoreSource.Thunderstore,
             RemotePackage = package,
             SelectedVersion = fallback,
             Message = BuildFallbackMessage(package, requestedVersion, fallback)
         };
     }
+
+    private static bool PayloadMatches(HtfBundlePayloadDescriptor payload, ProfileModRequirement requirement)
+        => (!string.IsNullOrWhiteSpace(requirement.PackageKey) || !string.IsNullOrWhiteSpace(requirement.IntrinsicId)) &&
+           payload.PortableId.Equals(requirement.PortableId, StringComparison.OrdinalIgnoreCase) &&
+           string.Equals(payload.PackageKey?.Trim() ?? "", requirement.PackageKey?.Trim() ?? "", StringComparison.OrdinalIgnoreCase) &&
+           string.Equals(payload.IntrinsicId?.Trim() ?? "", requirement.IntrinsicId?.Trim() ?? "", StringComparison.OrdinalIgnoreCase) &&
+           string.Equals(NormalizeVersion(payload.Version), NormalizeVersion(requirement.Version), StringComparison.OrdinalIgnoreCase) &&
+           payload.Source == requirement.Source;
+
+    private static string NormalizeVersion(string? version)
+        => string.IsNullOrWhiteSpace(version) ? "—" : version.Trim();
 
     private static ProfileRestoreItem Manual(ProfileModRequirement requirement, string message)
         => new()

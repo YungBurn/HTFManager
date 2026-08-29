@@ -18,6 +18,8 @@ public sealed class AppServices
     public IConfigurationService ConfigurationService { get; }
     public IProfileService ProfileService { get; }
     public IProfileRestoreService ProfileRestoreService { get; }
+    public IProfileHealthService ProfileHealthService { get; }
+    public IProfileBundleService ProfileBundleService { get; }
     public ISystemShell Shell { get; }
     public IGameLauncher Launcher { get; }
 
@@ -31,6 +33,8 @@ public sealed class AppServices
     public bool IsBusy { get; private set; }
     public string? OperationMessage { get; private set; }
     public bool OperationSucceeded { get; private set; } = true;
+
+    private readonly Dictionary<string, string> _profileBundleSources = new(StringComparer.OrdinalIgnoreCase);
 
     public event EventHandler? StateChanged;
     public event EventHandler? ConfigurationRequested;
@@ -48,6 +52,8 @@ public sealed class AppServices
         IConfigurationService configurationService,
         IProfileService profileService,
         IProfileRestoreService profileRestoreService,
+        IProfileHealthService profileHealthService,
+        IProfileBundleService profileBundleService,
         ISystemShell shell,
         IGameLauncher launcher)
     {
@@ -64,6 +70,8 @@ public sealed class AppServices
         ConfigurationService = configurationService;
         ProfileService = profileService;
         ProfileRestoreService = profileRestoreService;
+        ProfileHealthService = profileHealthService;
+        ProfileBundleService = profileBundleService;
         Shell = shell;
         Launcher = launcher;
 
@@ -615,6 +623,115 @@ public sealed class AppServices
     }
 
 
+    public ProfileHealthReport GetProfileHealth(ModProfile profile)
+        => ProfileHealthService.Evaluate(profile, Mods);
+
+    public ProfileBundleExportPlan BuildProfileBundleExportPlan(ModProfile profile)
+        => ProfileBundleService.BuildExportPlan(profile, Mods);
+
+    public async Task<bool> ExportProfileBundleAsync(ModProfile profile, string destinationPath)
+    {
+        if (IsBusy) return false;
+        SetBusy(true, Localization.Get("Ops.ProfileBundleExporting"));
+        try
+        {
+            // Full bundles may contain large retained packages. Keep archive hashing/copying
+            // off the Avalonia UI thread while the bundle service remains deterministic/synchronous.
+            var mods = Mods.ToArray();
+            var result = await Task.Run(() => ProfileBundleService.ExportBundle(profile, mods, destinationPath));
+            SetOperation(result.Success, Localization.Get(result.Success ? "Ops.ProfileBundleExported" : "Ops.ProfileBundleExportFailed") +
+                (result.Success || string.IsNullOrWhiteSpace(result.Message) ? "" : ": " + result.Message));
+            return result.Success;
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    public ProfileBundleInspection InspectProfileBundle(string bundlePath)
+        => ProfileBundleService.InspectBundle(bundlePath, Mods);
+
+    public bool ImportProfileBundle(string bundlePath, ProfileBundleInspection inspection, string? importName = null)
+    {
+        if (!inspection.IsValid || inspection.ProfileInspection is null)
+        {
+            SetOperation(false, Localization.Get("Ops.ProfileBundleImportFailed") + ": " + (inspection.Error ?? "invalid bundle"));
+            return false;
+        }
+
+        var targetName = string.IsNullOrWhiteSpace(importName)
+            ? inspection.ProfileInspection.ImportName
+            : importName.Trim();
+        var result = ProfileBundleService.ImportEmbeddedProfile(bundlePath, Mods, targetName);
+        SetOperation(result.Success, Localization.Get(result.Success ? "Ops.ProfileBundleImported" : "Ops.ProfileBundleImportFailed") +
+            (result.Success || string.IsNullOrWhiteSpace(result.Message) ? "" : ": " + result.Message));
+        if (!result.Success) return false;
+
+        _profileBundleSources[targetName] = bundlePath;
+        Refresh();
+        return true;
+    }
+
+    public string? GetProfileBundleSource(ModProfile profile)
+    {
+        if (!_profileBundleSources.TryGetValue(profile.Name, out var path)) return null;
+        if (File.Exists(path)) return path;
+        _profileBundleSources.Remove(profile.Name);
+        return null;
+    }
+
+    public ProfileBundleInspection? GetProfileBundleInspection(ModProfile profile)
+    {
+        var path = GetProfileBundleSource(profile);
+        if (path is null) return null;
+        var inspection = ProfileBundleService.InspectBundle(path, Mods);
+        return inspection.IsValid ? inspection : null;
+    }
+
+    public async Task<PreparedModPackage?> PrepareBundledPackageAsync(
+        string bundlePath,
+        HtfBundlePayloadDescriptor descriptor,
+        ProfileModRequirement requirement)
+    {
+        if (!Environment.GameFound)
+        {
+            SetOperation(false, Localization.Get("Ops.EnvironmentNotReady"));
+            return null;
+        }
+
+        SetBusy(true, Localization.Get("Ops.InspectingPackage"));
+        BundledPackageMaterialization? materialized = null;
+        try
+        {
+            materialized = ProfileBundleService.MaterializePayload(bundlePath, descriptor, requirement);
+            var inspection = await ModPackageService.InspectForInstallAsync(materialized.SourcePath, Environment, materialized.Metadata);
+            return new PreparedModPackage
+            {
+                SourcePath = materialized.SourcePath,
+                Metadata = materialized.Metadata,
+                Inspection = inspection,
+                TemporaryDirectory = materialized.TemporaryDirectory
+            };
+        }
+        catch (Exception ex)
+        {
+            if (materialized is not null) TryDeleteTemporaryDirectory(materialized.TemporaryDirectory);
+            SetOperation(false, Localization.Get("Ops.InstallFailed") + ": " + ex.Message);
+            return null;
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    public void CleanupPreparedPackage(PreparedModPackage prepared)
+    {
+        if (!string.IsNullOrWhiteSpace(prepared.TemporaryDirectory))
+            TryDeleteTemporaryDirectory(prepared.TemporaryDirectory!);
+    }
+
     public ProfilePackageInspection InspectProfilePackage(string packagePath)
         => ProfileService.InspectPortablePackage(packagePath, Mods);
 
@@ -698,9 +815,10 @@ public sealed class AppServices
             SetOperation(false, Localization.Get("Ops.ProfileUnsavedConfig"));
             return;
         }
-        if (profile.UnresolvedMods.Count > 0)
+        var health = ProfileHealthService.Evaluate(profile, Mods);
+        if (health.MissingCount > 0)
         {
-            SetOperation(false, string.Format(Localization.Get("Ops.ProfileHasMissingMods"), profile.UnresolvedMods.Count));
+            SetOperation(false, string.Format(Localization.Get("Ops.ProfileHasMissingMods"), health.MissingCount));
             return;
         }
 
@@ -748,28 +866,25 @@ public sealed class AppServices
 
     public void AddModToProfile(ModProfile profile, InstalledMod mod)
     {
-        profile.ModStates[mod.Id] = mod.Enabled;
-        ProfileService.Save(profile);
+        ProfileService.AddMod(profile, mod);
         Refresh();
     }
 
     public void RemoveModFromProfile(ModProfile profile, string modId)
     {
-        if (!profile.ModStates.Remove(modId)) return;
-        ProfileService.Save(profile);
+        ProfileService.RemoveMod(profile, modId);
         Refresh();
     }
 
     public void SetProfileModState(ModProfile profile, string modId, bool enabled)
     {
-        if (!profile.ModStates.ContainsKey(modId)) return;
-        profile.ModStates[modId] = enabled;
-        ProfileService.Save(profile);
+        ProfileService.SetModState(profile, modId, enabled);
         Refresh();
     }
 
     public void DeleteProfile(ModProfile profile)
     {
+        _profileBundleSources.Remove(profile.Name);
         ProfileService.Delete(profile);
         var remaining = ProfileService.LoadProfiles();
         if (profile.Name.Equals(Settings.ActiveProfile, StringComparison.OrdinalIgnoreCase))
@@ -912,6 +1027,17 @@ public sealed class AppServices
         }
 
         return Parse(left).CompareTo(Parse(right));
+    }
+
+    private static void TryDeleteTemporaryDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path)) Directory.Delete(path, true);
+        }
+        catch
+        {
+        }
     }
 
     private void SetBusy(bool busy, string? message = null)

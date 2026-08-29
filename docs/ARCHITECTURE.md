@@ -1,4 +1,4 @@
-# HTF Manager Architecture — v0.3.6
+# HTF Manager Architecture — v0.3.7
 
 ## 1. Design goals
 
@@ -150,9 +150,21 @@ Known loader configuration may have reviewed local Chinese presentation mappings
 
 Developer Mode controls the amount of metadata shown in the UI. It is not a safety bypass.
 
-## 9. Profiles and configuration snapshots
+## 9. Profiles, expected state and configuration snapshots
 
-Profiles contain desired Mod enabled/disabled state and optional unresolved Mod requirements.
+Profiles contain desired Mod enabled/disabled state and optional unresolved Mod requirements. v0.3.7 adds a durable `ExpectedMods` inventory so a profile can preserve the identity and expected version of resolved members instead of deriving those values from the machine's current installation later.
+
+The intended relationship is:
+
+```text
+ExpectedMods = canonical desired inventory
+ModStates = currently resolved local apply bindings
+UnresolvedMods = compatibility projection for requirements with no local binding
+```
+
+Legacy v0.3.6 profiles are migrated conservatively in memory. Existing unresolved requirements retain complete metadata; resolved legacy bindings are marked `LegacyBindingOnly` rather than inventing a historical version.
+
+`ProfileHealthService` is read-only and compares expected state with installed Mods. It reports `Healthy`, `Missing`, `VersionMismatch`, or `IdentityUncertain`. Trusted provider `PackageKey` identity takes precedence over local identity; when no provider key exists, v0.3.7 can use a deterministic intrinsic Mod identity extracted from static assembly metadata (for BepInEx, the `BepInPlugin` GUID) before falling back to saved local bindings/name/file matching. Duplicate intrinsic identities are ambiguous rather than guessed. Health calculation does not install packages, change expected versions, or mutate the game directory.
 
 v0.3.4 adds optional per-profile configuration snapshots. Snapshots use paths relative to the game root and store SHA-256 hashes. Applying a profile:
 
@@ -184,13 +196,13 @@ Import validates:
 
 Missing Mods become unresolved profile requirements. Profiles with unresolved requirements cannot be applied unless the requirements are installed/re-matched or explicitly removed.
 
-Portable profiles never bundle third-party Mod binaries, loader runtimes or game files.
+Lightweight `.htfprofile` files never bundle third-party Mod binaries, loader runtimes or game files. v0.3.7 separately introduces the `.htfbundle` container for explicitly eligible package artifacts; that format remains profile-first and must not turn opening a bundle into automatic installation.
 
 ## 11. Profile Restore Assistant
 
 v0.3.6 adds a restoration orchestration layer for unresolved portable-profile requirements. The planner is read-only and classifies each unresolved requirement as `Ready`, `VersionFallback`, `PackageUnavailable`, or `ManualRequired`.
 
-Automatic resolution is intentionally limited to exact Thunderstore `PackageKey` matches. When a requested version is available it is selected directly; when only another downloadable version is available the item is marked as `VersionFallback` and requires explicit acknowledgement. The planner never guesses a package from display text.
+Remote automatic resolution remains intentionally limited to exact Thunderstore `PackageKey` matches. v0.3.7 additionally allows an exact `.htfbundle` payload for a requirement that is currently `Missing`; this can include an eligible local managed Mod identified by a deterministic intrinsic identity. When a Thunderstore requested version is available it is selected directly; when only another downloadable version is available the item is marked as `VersionFallback` and requires explicit acknowledgement. The planner never guesses a package from display text or filename alone.
 
 Installable candidates reuse the existing remote preparation and Package Inspector path:
 
@@ -227,10 +239,16 @@ Data categories include settings, profiles, Mod/loader ownership records, caches
 
 Generated build output, game files, downloaded loader/Mod binaries and local application data do not belong in Git.
 
-## 14. Planned next subsystem
+## 14. Active v0.3.7 subsystem
 
-v0.3.7 should add **Profile Health & Version Reconciliation**. The key gap is that the current matcher accepts an installed Mod with the same trusted identity even when its version differs from the portable-profile requirement; after import that expected version is not retained for already-resolved members.
+v0.3.7 is **Portable Profile Bundle & Health**. `ExpectedMods` is the canonical desired inventory and `ProfileHealthService` compares that desired state with the current machine as `Healthy`, `Missing`, `VersionMismatch` or `IdentityUncertain`. The calculation is read-only; only `Missing` blocks profile application.
 
-v0.3.7 should preserve expected identity/version metadata for resolved profile members, compute profile health without mutating the installation, surface version drift explicitly, and only then add a safe reconciliation path for supported managed Thunderstore Mods through the existing Package Inspector/update ownership flow.
+Full sharing uses `.htfbundle`, a ZIP-compatible profile-first container with exactly one root `bundle.json`, one root `profile.htfprofile` and optional verified package payloads. `PackageArtifactStore` resolves only HTF-managed retained source artifacts whose SHA-256 still matches the current installation record. Thunderstore packages use provider `PackageKey`; eligible local BepInEx DLL/ZIP installs may use their intrinsic `BepInPlugin` GUID plus exact version without fabricating a provider key. External/development Mods, loaders, ambiguous local packages, reconstructed live-game directories and dependency closure are not automatically bundled.
 
-Nexus support remains a later provider integration rather than being embedded into profile health or matching logic.
+`ProfileBundleService` owns bundle export, structural/security validation, embedded-profile inspection and lazy payload materialization. Opening a bundle never installs a Mod: the embedded profile is validated first, environment health is computed, and only a requirement that is actually `Missing` may expose an exact bundled payload. Healthy requirements suppress duplicate installation, while `VersionMismatch` remains warning-only in v0.3.7 even when the expected payload is present.
+
+Bundled payloads are transport artifacts, not a second installation path. A selected payload is lazily extracted to staging, checked against declared size/SHA-256 and profile identity, then passed to the existing Package Inspector and transactional installer with the original logical source/PackageKey/version metadata preserved. The received bundle path is session-only and is never persisted into `ModProfile`; successfully installed payloads enter the normal managed package cache through the existing installer.
+
+The restore planner gives an exact bundle payload priority over Thunderstore for `Missing` requirements and can operate offline when every unresolved requirement is already classifiable from the bundle/manual state. Remote fallback behavior remains the existing v0.3.6 behavior for genuinely missing Thunderstore requirements. Automatic version replacement/downgrade reconciliation is explicitly outside v0.3.7 and remains a later release. Nexus support also remains a later provider integration.
+
+The canonical scope and exclusions are defined in `docs/V0.3.7_SCOPE_LOCK.md`.

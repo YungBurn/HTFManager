@@ -1,12 +1,12 @@
 # HTF Manager Development Handoff
 
-This document is the preferred entry point when continuing development on a new workstation.
+This document is the preferred entry point when development continues in a new ChatGPT conversation or on another workstation.
 
 ## Current baseline
 
 - Project: **HTF Manager**
-- Current version: **v0.3.6**
-- Last verified state: `dotnet restore`, Release `dotnet build`, and `dotnet run` succeed on Windows/.NET 10 and the application enters the UI.
+- Current version: **v0.3.7 release candidate**
+- Last verified state: the v0.3.7 full bundle/health implementation passed local Windows/.NET 10 build/tests/runtime before the final intrinsic-local-identity release overlay. Re-run the release gate after applying the final overlay before merge/tag.
 - Solution: `HTFManager.slnx`
 - App project: `src/HTFManager.App/HTFManager.App.csproj`
 - Target framework: `.NET 10` (`net10.0`)
@@ -87,20 +87,15 @@ v0.3.4 added optional Mod configuration snapshots. Profile application backs up 
 
 Loader-wide settings such as `BepInEx.cfg` or MelonLoader `Loader.cfg` are intentionally excluded from normal profile Mod snapshots.
 
-### Portable profiles
+### Portable profiles and bundles
 
-v0.3.5 added `.htfprofile` export/import. Portable profiles contain:
+v0.3.5 introduced lightweight `.htfprofile` export/import. v0.3.7 keeps that metadata-only format and adds `.htfbundle` for explicit full portable sharing.
 
-- Mod references
-- desired enabled states
-- source / loader / component / version metadata
-- optional profile configuration snapshots
+Profiles now preserve durable expected Mod identity/version metadata and can report `Healthy`, `Missing`, `VersionMismatch`, or `IdentityUncertain`. Full bundles contain the embedded `.htfprofile` plus only eligible verified HTF-managed source artifacts; opening/importing a bundle never installs payloads automatically.
 
-They do not contain Mod DLLs, Mod archives, loader binaries or game files.
+Identity precedence is provider `PackageKey` first, then deterministic local `IntrinsicId` where available, then conservative local bindings/name/file matching. BepInEx local DLL/ZIP packages can expose their `BepInPlugin` GUID/name/version through static PE metadata inspection without loading the assembly. This allows a managed package such as `TrueDotCrosshair` to remain a local package (`PackageKey = null`) while still being safely shareable when its exact version and retained source artifact are verified.
 
-Import validates ZIP paths, schema, limits, hashes and configuration-to-Mod associations before creating a local profile. Missing Mods stay as unresolved requirements. A profile with unresolved requirements cannot be applied until the requirements are resolved or explicitly removed.
-
-v0.3.5.1 fixes the `PortableProfileManifest.ExportedWithVersion` compile-time self-reference introduced in v0.3.5.
+Bundle restore is profile-first and only offers a bundled payload when the requirement is actually `Missing`. Healthy requirements suppress duplicate installation and `VersionMismatch` never triggers automatic replacement in v0.3.7. Payloads are lazily extracted, size/hash/identity checked, and then passed to the existing Package Inspector/transactional installer.
 
 ### Profile Restore Assistant
 
@@ -144,7 +139,7 @@ Future changes must preserve these rules:
 7. Do not force-translate unknown third-party configuration keys/descriptions.
 8. Developer Mode exposes diagnostics; it never disables install/configuration safety rules.
 9. Profiles alter desired state; profile membership changes are not Mod install/uninstall operations.
-10. Portable profiles do not redistribute third-party binaries or game files.
+10. Lightweight `.htfprofile` files never redistribute binaries. `.htfbundle` may carry only explicitly eligible verified HTF-managed Mod source artifacts; never include game files, loaders, ambiguous local packages, or external/unmanaged Mods automatically.
 
 ## Known UI implementation concern
 
@@ -157,37 +152,36 @@ Other historical Avalonia/C# regressions to avoid:
 - use `PlaceholderText`, not obsolete `Watermark`;
 - namespace `HTFManager.Infrastructure.System` can shadow `System`; use `global::System...` when needed.
 
-## Known build warnings
+## Release validation status
 
-The verified v0.3.6 build currently reports three non-blocking Avalonia `AVLN3001` warnings for:
+The v0.3.7 feature implementation previously passed local restore/build/test/runtime validation. The final intrinsic-identity/release overlay changes package metadata parsing and version metadata, so the release gate must be re-run before merge/tag:
 
-- `LoaderSetupDialog.axaml`;
-- `PackageInspectorDialog.axaml`;
-- `ProfileImportDialog.axaml`.
+```powershell
+dotnet restore HTFManager.slnx
+dotnet build HTFManager.slnx --configuration Release --no-restore
+dotnet test --project .\tests\HTFManager.Tests\HTFManager.Tests.csproj --configuration Release --no-build --no-restore
+dotnet run --project .\src\HTFManager.App\HTFManager.App.csproj
+```
 
-The application starts successfully and the verified dialog workflows are not blocked. Do not confuse these existing warnings with a new feature regression; investigate separately if runtime loader behavior changes.
+Expected automated suite after the intrinsic-identity enhancement: **54 tests**. Also verify one manifest-less BepInEx local ZIP/DLL with a deterministic `BepInPlugin` GUID can be captured and included in Full Share, while a duplicate/ambiguous intrinsic identity remains non-automatic.
 
 ## Next planned version
 
-### v0.3.7 — Profile Health & Version Reconciliation
+### v0.3.8 — Profile Version Reconciliation
 
-Goal: close the version-drift gap left intentionally by v0.3.6.
-
-Current matching treats the same trusted Mod identity as resolved even when the installed version differs from the version recorded in the imported profile. v0.3.7 should preserve expected metadata for resolved members and compute a read-only health state before attempting any correction.
+Goal: act on the `VersionMismatch` health state that v0.3.7 deliberately detects but does not repair.
 
 Expected direction:
 
 ```text
-profile expectation metadata
-→ map to current installed Mod
-→ Healthy / Missing / VersionMismatch / IdentityUncertain
-→ show profile health
-→ for supported managed Thunderstore mismatches, explicitly inspect the expected version
-→ existing Package Inspector / ownership-safe replacement path
+VersionMismatch
+→ exact expected-version availability
+→ explicit user choice
+→ Package Inspector / ownership-safe replacement
 → refresh and re-check health
 ```
 
-Do not silently downgrade/upgrade Mods. External/manual Mods must not be taken over just to satisfy a profile. Keep Nexus as a later provider-integration milestone. See `docs/V0.3.7_PROFILE_HEALTH_AND_VERSION_RECONCILIATION.md`.
+No silent downgrade/upgrade. External/manual Mods must not be taken over just to satisfy a profile. A second explicit action may allow the user to adopt the currently installed deterministic version as the profile baseline, but that is a v0.3.8 concern. Nexus remains a later provider integration.
 
 ## Cross-session workflow
 

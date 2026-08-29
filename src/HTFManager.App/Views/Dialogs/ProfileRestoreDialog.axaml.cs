@@ -9,6 +9,7 @@ namespace HTFManager.App.Views.Dialogs;
 public partial class ProfileRestoreDialog : Window
 {
     private string _profileName = "";
+    private string? _bundlePath;
     private ProfileRestorePlan? _plan;
     private bool _changed;
     private bool _refreshing;
@@ -24,6 +25,7 @@ public partial class ProfileRestoreDialog : Window
     public ProfileRestoreDialog(ModProfile profile) : this()
     {
         _profileName = profile.Name;
+        _bundlePath = App.Services.GetProfileBundleSource(profile);
         ProfileNameText.Text = profile.Name;
     }
 
@@ -55,9 +57,13 @@ public partial class ProfileRestoreDialog : Window
             }
 
             ProfileNameText.Text = profile.Name;
+            _bundlePath ??= App.Services.GetProfileBundleSource(profile);
 
-            if (resolveLocal && profile.UnresolvedMods.Count > 0)
+            if (resolveLocal)
             {
+                // ResolveMissingMods also rebuilds UnresolvedMods from ExpectedMods, so this must
+                // run even when the legacy projection is currently empty (for example, a Mod
+                // removed after the profile was captured).
                 App.Services.ResolveMissingProfileMods(profile);
                 profile = FindCurrentProfile();
                 if (profile is null)
@@ -74,10 +80,31 @@ public partial class ProfileRestoreDialog : Window
                 return;
             }
 
-            if (!App.Services.CatalogLoaded || forceCatalogRefresh)
+            IReadOnlyList<HtfBundlePayloadDescriptor> bundledPayloads = Array.Empty<HtfBundlePayloadDescriptor>();
+            if (!string.IsNullOrWhiteSpace(_bundlePath) && File.Exists(_bundlePath))
+            {
+                var bundleInspection = App.Services.InspectProfileBundle(_bundlePath);
+                if (bundleInspection.IsValid && bundleInspection.Manifest is not null)
+                    bundledPayloads = bundleInspection.Manifest.Payloads;
+            }
+
+            // Build a bundle/manual-only plan first. If every unresolved requirement can be
+            // classified without Thunderstore, avoid a network request entirely so a complete
+            // portable bundle remains useful offline.
+            var offlinePlan = App.Services.ProfileRestoreService.BuildPlan(
+                profile,
+                Array.Empty<RemoteModPackage>(),
+                bundledPayloads,
+                catalogAvailable: false);
+            var needsCatalog = offlinePlan.Items.Any(item =>
+                item.Disposition == ProfileRestoreDisposition.CatalogUnavailable);
+
+            if (needsCatalog && (!App.Services.CatalogLoaded || forceCatalogRefresh))
                 await App.Services.LoadCatalogAsync(forceCatalogRefresh);
 
-            if (!App.Services.CatalogLoaded)
+            var catalogAvailable = App.Services.CatalogLoaded;
+            var hasBundleContext = !string.IsNullOrWhiteSpace(_bundlePath) && File.Exists(_bundlePath);
+            if (needsCatalog && !catalogAvailable && !hasBundleContext)
             {
                 ShowCatalogError();
                 return;
@@ -90,7 +117,13 @@ public partial class ProfileRestoreDialog : Window
                 return;
             }
 
-            _plan = App.Services.ProfileRestoreService.BuildPlan(profile, App.Services.Catalog);
+            _plan = needsCatalog
+                ? App.Services.ProfileRestoreService.BuildPlan(
+                    profile,
+                    catalogAvailable ? App.Services.Catalog : Array.Empty<RemoteModPackage>(),
+                    bundledPayloads,
+                    catalogAvailable)
+                : offlinePlan;
             RenderPlan();
         }
         finally
@@ -147,7 +180,7 @@ public partial class ProfileRestoreDialog : Window
         {
             ProfileRestoreDisposition.Ready => "Brush.Success",
             ProfileRestoreDisposition.VersionFallback => "Brush.Warning",
-            ProfileRestoreDisposition.PackageUnavailable => "Brush.Error",
+            ProfileRestoreDisposition.PackageUnavailable or ProfileRestoreDisposition.CatalogUnavailable => "Brush.Error",
             _ => "Brush.TextSecondary"
         });
 
@@ -159,15 +192,20 @@ public partial class ProfileRestoreDialog : Window
             TextTrimming = TextTrimming.CharacterEllipsis
         };
 
-        var packageKey = string.IsNullOrWhiteSpace(requirement.PackageKey)
-            ? App.Services.Localization.Get("Restore.NoPackageKey")
-            : requirement.PackageKey;
+        var packageKey = !string.IsNullOrWhiteSpace(requirement.PackageKey)
+            ? requirement.PackageKey
+            : !string.IsNullOrWhiteSpace(requirement.IntrinsicId)
+                ? requirement.IntrinsicId
+                : App.Services.Localization.Get("Restore.NoPackageKey");
         var requestedVersion = NormalizeVersion(requirement.Version);
         var selectedVersion = item.SelectedVersionNumber;
+        var recoverySource = item.RestoreSource == ProfileRestoreSource.Bundle
+            ? App.Services.Localization.Get("Restore.SourceBundle")
+            : SourceLabel(requirement.Source);
 
         var identity = new TextBlock
         {
-            Text = $"{SourceLabel(requirement.Source)}  ·  {LoaderLabel(requirement.Loader)}  ·  {packageKey}",
+            Text = $"{recoverySource}  ·  {LoaderLabel(requirement.Loader)}  ·  {packageKey}",
             Foreground = ResourceBrush("Brush.TextSecondary"),
             FontSize = 10,
             TextTrimming = TextTrimming.CharacterEllipsis
@@ -210,9 +248,14 @@ public partial class ProfileRestoreDialog : Window
             }
         };
 
+        var hasSource = item.RestoreSource switch
+        {
+            ProfileRestoreSource.Bundle => item.BundlePayload is not null && !string.IsNullOrWhiteSpace(_bundlePath),
+            ProfileRestoreSource.Thunderstore => item.RemotePackage is not null && item.SelectedVersion is not null,
+            _ => false
+        };
         var canInspect = item.IsInstallable &&
-                         item.RemotePackage is not null &&
-                         item.SelectedVersion is not null &&
+                         hasSource &&
                          App.Services.Environment.GameFound &&
                          !App.Services.Launcher.IsRunning(App.Services.Environment) &&
                          !App.Services.IsBusy;
@@ -271,7 +314,7 @@ public partial class ProfileRestoreDialog : Window
 
     private async Task InspectAndInstallAsync(ProfileRestoreItem item)
     {
-        if (_refreshing || item.RemotePackage is null || item.SelectedVersion is null)
+        if (_refreshing || !item.IsInstallable)
             return;
 
         if (App.Services.Launcher.IsRunning(App.Services.Environment))
@@ -283,10 +326,28 @@ public partial class ProfileRestoreDialog : Window
         SetLocalBusy(true);
         try
         {
-            var installed = await PackageInspectorDialog.ShowForRemoteAsync(
-                this,
-                item.RemotePackage,
-                item.SelectedVersion);
+            bool installed;
+            if (item.RestoreSource == ProfileRestoreSource.Bundle &&
+                item.BundlePayload is not null &&
+                !string.IsNullOrWhiteSpace(_bundlePath))
+            {
+                installed = await PackageInspectorDialog.ShowForBundledAsync(
+                    this,
+                    _bundlePath!,
+                    item.BundlePayload,
+                    item.Requirement);
+            }
+            else if (item.RemotePackage is not null && item.SelectedVersion is not null)
+            {
+                installed = await PackageInspectorDialog.ShowForRemoteAsync(
+                    this,
+                    item.RemotePackage,
+                    item.SelectedVersion);
+            }
+            else
+            {
+                return;
+            }
 
             if (!installed)
             {
@@ -296,7 +357,7 @@ public partial class ProfileRestoreDialog : Window
 
             _changed = true;
             var current = FindCurrentProfile();
-            if (current is not null && current.UnresolvedMods.Count > 0)
+            if (current is not null)
                 App.Services.ResolveMissingProfileMods(current);
 
             await RefreshPlanAsync(resolveLocal: false, forceCatalogRefresh: false);
@@ -344,11 +405,15 @@ public partial class ProfileRestoreDialog : Window
 
     private string BuildExplanation(ProfileRestoreItem item)
     {
+        if (item.RestoreSource == ProfileRestoreSource.Bundle)
+            return App.Services.Localization.Get("Restore.ExplainBundle");
+
         var key = item.Disposition switch
         {
             ProfileRestoreDisposition.Ready => "Restore.ExplainReady",
             ProfileRestoreDisposition.VersionFallback => "Restore.ExplainFallback",
             ProfileRestoreDisposition.PackageUnavailable => "Restore.ExplainUnavailable",
+            ProfileRestoreDisposition.CatalogUnavailable => "Restore.ExplainCatalogUnavailable",
             _ => "Restore.ExplainManual"
         };
 
@@ -382,7 +447,7 @@ public partial class ProfileRestoreDialog : Window
         {
             ProfileRestoreDisposition.Ready => "Restore.Ready",
             ProfileRestoreDisposition.VersionFallback => "Restore.VersionFallback",
-            ProfileRestoreDisposition.PackageUnavailable => "Restore.Unavailable",
+            ProfileRestoreDisposition.PackageUnavailable or ProfileRestoreDisposition.CatalogUnavailable => "Restore.Unavailable",
             _ => "Restore.Manual"
         });
 
@@ -390,7 +455,7 @@ public partial class ProfileRestoreDialog : Window
     {
         ProfileRestoreDisposition.Ready => 0,
         ProfileRestoreDisposition.VersionFallback => 1,
-        ProfileRestoreDisposition.PackageUnavailable => 2,
+        ProfileRestoreDisposition.PackageUnavailable or ProfileRestoreDisposition.CatalogUnavailable => 2,
         _ => 3
     };
 

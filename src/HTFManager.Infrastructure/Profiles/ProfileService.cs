@@ -16,7 +16,7 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
     private static readonly JsonSerializerOptions PortableJsonOptions = CreatePortableJsonOptions();
     private const string PortableFormat = "HTFManager.Profile";
     private const int PortableSchemaVersion = 1;
-    private const string ExportedWithVersion = "0.3.6";
+    private const string ExportedWithVersion = "0.3.7";
     private const long MaxPortableArchiveBytes = 32L * 1024L * 1024L;
     private const long MaxPortableConfigBytes = 4L * 1024L * 1024L;
 
@@ -32,11 +32,7 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
                 var profile = JsonSerializer.Deserialize<ModProfile>(File.ReadAllText(file), JsonOptions);
                 if (profile is not null)
                 {
-                    profile.ModStates = new Dictionary<string, bool>(
-                        profile.ModStates ?? new Dictionary<string, bool>(),
-                        StringComparer.OrdinalIgnoreCase);
-                    profile.ConfigurationSnapshots ??= new List<ProfileConfigurationSnapshot>();
-                    profile.UnresolvedMods ??= new List<ProfileModRequirement>();
+                    NormalizeProfile(profile);
                     profiles.Add(profile);
                 }
             }
@@ -48,17 +44,104 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
 
     public ModProfile Capture(string name, IReadOnlyList<InstalledMod> mods)
     {
-        return new ModProfile
+        var profile = new ModProfile
         {
             Name = name,
             ModStates = mods.ToDictionary(m => m.Id, m => m.Enabled, StringComparer.OrdinalIgnoreCase)
         };
+
+        foreach (var mod in mods)
+        {
+            profile.ExpectedMods.Add(new ProfileModExpectation
+            {
+                Requirement = RequirementFromInstalled(mod, mod.Enabled),
+                ResolvedModId = mod.Id,
+                MetadataQuality = ProfileExpectationMetadataQuality.Complete
+            });
+        }
+
+        return profile;
     }
 
     public void Save(ModProfile profile)
     {
+        NormalizeProfile(profile);
         Directory.CreateDirectory(_directory);
         File.WriteAllText(ProfilePath(profile.Name), JsonSerializer.Serialize(profile, JsonOptions));
+    }
+
+    public void AddMod(ModProfile profile, InstalledMod mod)
+    {
+        NormalizeProfile(profile);
+        profile.ModStates[mod.Id] = mod.Enabled;
+
+        var existing = profile.ExpectedMods.FirstOrDefault(item =>
+            !string.IsNullOrWhiteSpace(item.ResolvedModId) &&
+            item.ResolvedModId!.Equals(mod.Id, StringComparison.OrdinalIgnoreCase));
+        var expectation = new ProfileModExpectation
+        {
+            Requirement = RequirementFromInstalled(mod, mod.Enabled),
+            ResolvedModId = mod.Id,
+            MetadataQuality = ProfileExpectationMetadataQuality.Complete
+        };
+
+        if (existing is null)
+            profile.ExpectedMods.Add(expectation);
+        else
+        {
+            existing.Requirement = expectation.Requirement;
+            existing.ResolvedModId = expectation.ResolvedModId;
+            existing.MetadataQuality = expectation.MetadataQuality;
+        }
+
+        Save(profile);
+    }
+
+    public void RemoveMod(ModProfile profile, string modId)
+    {
+        NormalizeProfile(profile);
+        if (!profile.ModStates.Remove(modId)) return;
+
+        var removedPortableIds = profile.ExpectedMods
+            .Where(item => !string.IsNullOrWhiteSpace(item.ResolvedModId) &&
+                           item.ResolvedModId!.Equals(modId, StringComparison.OrdinalIgnoreCase))
+            .Select(item => item.Requirement.PortableId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        profile.ExpectedMods.RemoveAll(item =>
+            !string.IsNullOrWhiteSpace(item.ResolvedModId) &&
+            item.ResolvedModId!.Equals(modId, StringComparison.OrdinalIgnoreCase));
+
+        var snapshotDirectory = ProfileSnapshotDirectory(profile.Name);
+        foreach (var snapshot in profile.ConfigurationSnapshots.Where(item =>
+                     (!string.IsNullOrWhiteSpace(item.AssociatedModId) &&
+                      item.AssociatedModId!.Equals(modId, StringComparison.OrdinalIgnoreCase)) ||
+                     (!string.IsNullOrWhiteSpace(item.AssociatedPortableModId) &&
+                      removedPortableIds.Contains(item.AssociatedPortableModId!))).ToArray())
+        {
+            profile.ConfigurationSnapshots.Remove(snapshot);
+            try
+            {
+                var path = Path.Combine(snapshotDirectory, snapshot.SnapshotFileName);
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch { }
+        }
+
+        Save(profile);
+    }
+
+    public void SetModState(ModProfile profile, string modId, bool enabled)
+    {
+        NormalizeProfile(profile);
+        if (!profile.ModStates.ContainsKey(modId)) return;
+        profile.ModStates[modId] = enabled;
+
+        foreach (var expectation in profile.ExpectedMods.Where(item =>
+                     !string.IsNullOrWhiteSpace(item.ResolvedModId) &&
+                     item.ResolvedModId!.Equals(modId, StringComparison.OrdinalIgnoreCase)))
+            expectation.Requirement.Enabled = enabled;
+
+        Save(profile);
     }
 
     public void Delete(ModProfile profile)
@@ -133,36 +216,22 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
 
         try
         {
+            NormalizeProfile(profile);
             var installedById = installedMods.ToDictionary(mod => mod.Id, StringComparer.OrdinalIgnoreCase);
             var requirements = new List<ProfileModRequirement>();
             var portableByLocalId = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var pair in profile.ModStates.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+            foreach (var expectation in profile.ExpectedMods
+                         .OrderBy(item => item.Requirement.Name, StringComparer.CurrentCultureIgnoreCase)
+                         .ThenBy(item => item.Requirement.PortableId, StringComparer.OrdinalIgnoreCase))
             {
-                if (installedById.TryGetValue(pair.Key, out var mod))
-                {
-                    var requirement = RequirementFromInstalled(mod, pair.Value);
-                    requirements.Add(requirement);
-                    portableByLocalId[pair.Key] = requirement.PortableId;
-                }
-                else
-                {
-                    var requirement = new ProfileModRequirement
-                    {
-                        PortableId = "legacy-" + HashText(pair.Key)[..24].ToLowerInvariant(),
-                        Name = pair.Key,
-                        Enabled = pair.Value
-                    };
-                    requirements.Add(requirement);
-                    portableByLocalId[pair.Key] = requirement.PortableId;
-                }
-            }
+                var requirement = expectation.MetadataQuality == ProfileExpectationMetadataQuality.LegacyBindingOnly
+                    ? BuildLegacyExportRequirement(expectation, installedById)
+                    : CloneRequirement(expectation.Requirement);
 
-            foreach (var unresolved in profile.UnresolvedMods)
-            {
-                if (requirements.Any(item => item.PortableId.Equals(unresolved.PortableId, StringComparison.OrdinalIgnoreCase)))
-                    continue;
-                requirements.Add(CloneRequirement(unresolved));
+                requirements.Add(requirement);
+                if (!string.IsNullOrWhiteSpace(expectation.ResolvedModId))
+                    portableByLocalId[expectation.ResolvedModId!] = requirement.PortableId;
             }
 
             var manifest = new PortableProfileManifest
@@ -175,6 +244,9 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
                 Mods = requirements
             };
 
+            var knownPortableIds = requirements
+                .Select(item => item.PortableId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var snapshotDirectory = ProfileSnapshotDirectory(profile.Name);
             foreach (var snapshot in profile.ConfigurationSnapshots)
             {
@@ -187,7 +259,8 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
                     return ProfileOperationResult.Fail($"Configuration path cannot be shared: {snapshot.RelativePath}");
 
                 var portableId = snapshot.AssociatedPortableModId;
-                if (string.IsNullOrWhiteSpace(portableId) && !string.IsNullOrWhiteSpace(snapshot.AssociatedModId))
+                if ((string.IsNullOrWhiteSpace(portableId) || !knownPortableIds.Contains(portableId)) &&
+                    !string.IsNullOrWhiteSpace(snapshot.AssociatedModId))
                     portableByLocalId.TryGetValue(snapshot.AssociatedModId!, out portableId);
 
                 var extension = Path.GetExtension(snapshot.SnapshotFileName);
@@ -269,15 +342,21 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
 
             var profile = new ModProfile { Name = name };
             var matchedByPortableId = new Dictionary<string, InstalledMod>(StringComparer.OrdinalIgnoreCase);
-            var resolvedPortableIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var requirement in manifest.Mods)
             {
+                var preservedRequirement = CloneRequirement(requirement);
                 var match = MatchRequirement(requirement, installedMods);
+                profile.ExpectedMods.Add(new ProfileModExpectation
+                {
+                    Requirement = preservedRequirement,
+                    ResolvedModId = match?.Id,
+                    MetadataQuality = ProfileExpectationMetadataQuality.Complete
+                });
+
                 if (match is not null)
                 {
                     profile.ModStates[match.Id] = requirement.Enabled;
                     matchedByPortableId[requirement.PortableId] = match;
-                    resolvedPortableIds[requirement.PortableId] = RequirementFromInstalled(match, requirement.Enabled).PortableId;
                 }
                 else
                 {
@@ -314,8 +393,6 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
                         associatedModId = matchedByPortableId.TryGetValue(config.AssociatedPortableModId!, out var matched)
                             ? matched.Id
                             : "unresolved:" + config.AssociatedPortableModId;
-                        if (resolvedPortableIds.TryGetValue(config.AssociatedPortableModId!, out var localPortableId))
-                            associatedPortableModId = localPortableId;
                     }
 
                     profile.ConfigurationSnapshots.Add(new ProfileConfigurationSnapshot
@@ -362,6 +439,25 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
 
     public ProfileOperationResult ResolveMissingMods(ModProfile profile, IReadOnlyList<InstalledMod> installedMods)
     {
+        NormalizeProfile(profile);
+
+        // Rebuild the unresolved projection from canonical expected state first.
+        // This catches Mods that were present when the profile was created/imported but were removed later.
+        var health = new ProfileHealthService().Evaluate(profile, installedMods);
+        foreach (var item in health.Items.Where(item => item.Status == ProfileHealthStatus.Missing))
+        {
+            var expectation = item.Expectation;
+            if (!string.IsNullOrWhiteSpace(expectation.ResolvedModId))
+            {
+                profile.ModStates.Remove(expectation.ResolvedModId!);
+                expectation.ResolvedModId = null;
+            }
+
+            if (!profile.UnresolvedMods.Any(requirement =>
+                    requirement.PortableId.Equals(expectation.Requirement.PortableId, StringComparison.OrdinalIgnoreCase)))
+                profile.UnresolvedMods.Add(CloneRequirement(expectation.Requirement));
+        }
+
         var resolved = 0;
         foreach (var requirement in profile.UnresolvedMods.ToArray())
         {
@@ -369,13 +465,24 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
             if (match is null) continue;
 
             profile.ModStates[match.Id] = requirement.Enabled;
-            var localPortableId = RequirementFromInstalled(match, requirement.Enabled).PortableId;
+            var expectation = profile.ExpectedMods.FirstOrDefault(item =>
+                item.Requirement.PortableId.Equals(requirement.PortableId, StringComparison.OrdinalIgnoreCase));
+            if (expectation is null)
+            {
+                expectation = new ProfileModExpectation
+                {
+                    Requirement = CloneRequirement(requirement),
+                    MetadataQuality = ProfileExpectationMetadataQuality.Complete
+                };
+                profile.ExpectedMods.Add(expectation);
+            }
+            expectation.ResolvedModId = match.Id;
+
             foreach (var snapshot in profile.ConfigurationSnapshots.Where(item =>
                          !string.IsNullOrWhiteSpace(item.AssociatedPortableModId) &&
                          item.AssociatedPortableModId!.Equals(requirement.PortableId, StringComparison.OrdinalIgnoreCase)))
             {
                 snapshot.AssociatedModId = match.Id;
-                snapshot.AssociatedPortableModId = localPortableId;
             }
 
             profile.UnresolvedMods.Remove(requirement);
@@ -388,10 +495,13 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
 
     public void RemoveMissingMod(ModProfile profile, string portableId)
     {
+        NormalizeProfile(profile);
         if (string.IsNullOrWhiteSpace(portableId)) return;
         var removed = profile.UnresolvedMods.RemoveAll(item =>
             item.PortableId.Equals(portableId, StringComparison.OrdinalIgnoreCase));
-        if (removed == 0) return;
+        var removedExpectations = profile.ExpectedMods.RemoveAll(item =>
+            item.Requirement.PortableId.Equals(portableId, StringComparison.OrdinalIgnoreCase));
+        if (removed == 0 && removedExpectations == 0) return;
 
         var snapshotDirectory = ProfileSnapshotDirectory(profile.Name);
         var snapshots = profile.ConfigurationSnapshots.Where(item =>
@@ -520,8 +630,13 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
         IModService modService,
         string? gameDirectory)
     {
+        NormalizeProfile(profile);
         if (profile.UnresolvedMods.Count > 0)
             return ProfileOperationResult.Fail("Profile contains unresolved shared mods.");
+
+        var health = new ProfileHealthService().Evaluate(profile, mods);
+        if (health.HasBlockingMissing)
+            return ProfileOperationResult.Fail($"Profile contains {health.MissingCount} missing expected mod(s).");
 
         var originalStates = mods.ToDictionary(mod => mod.Id, mod => mod.Enabled, StringComparer.OrdinalIgnoreCase);
         var changedMods = new List<InstalledMod>();
@@ -766,11 +881,85 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
         return baseName + "-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
     }
 
+    private static void NormalizeProfile(ModProfile profile)
+    {
+        profile.ModStates = new Dictionary<string, bool>(
+            profile.ModStates ?? new Dictionary<string, bool>(),
+            StringComparer.OrdinalIgnoreCase);
+        profile.ConfigurationSnapshots ??= new List<ProfileConfigurationSnapshot>();
+        profile.UnresolvedMods ??= new List<ProfileModRequirement>();
+        profile.ExpectedMods ??= new List<ProfileModExpectation>();
+
+        foreach (var expectation in profile.ExpectedMods)
+            expectation.Requirement ??= new ProfileModRequirement();
+
+        var expectedPortableIds = profile.ExpectedMods
+            .Select(item => item.Requirement.PortableId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var resolvedIds = profile.ExpectedMods
+            .Select(item => item.ResolvedModId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var unresolved in profile.UnresolvedMods)
+        {
+            if (!expectedPortableIds.Add(unresolved.PortableId))
+                continue;
+            profile.ExpectedMods.Add(new ProfileModExpectation
+            {
+                Requirement = CloneRequirement(unresolved),
+                ResolvedModId = null,
+                MetadataQuality = ProfileExpectationMetadataQuality.Complete
+            });
+        }
+
+        foreach (var pair in profile.ModStates)
+        {
+            if (!resolvedIds.Add(pair.Key))
+                continue;
+
+            profile.ExpectedMods.Add(new ProfileModExpectation
+            {
+                Requirement = new ProfileModRequirement
+                {
+                    PortableId = LegacyPortableId(pair.Key),
+                    Name = pair.Key,
+                    Version = "—",
+                    Enabled = pair.Value
+                },
+                ResolvedModId = pair.Key,
+                MetadataQuality = ProfileExpectationMetadataQuality.LegacyBindingOnly
+            });
+        }
+    }
+
+    private static ProfileModRequirement BuildLegacyExportRequirement(
+        ProfileModExpectation expectation,
+        IReadOnlyDictionary<string, InstalledMod> installedById)
+    {
+        var requirement = CloneRequirement(expectation.Requirement);
+        if (string.IsNullOrWhiteSpace(expectation.ResolvedModId) ||
+            !installedById.TryGetValue(expectation.ResolvedModId!, out var installed))
+            return requirement;
+
+        var enriched = RequirementFromInstalled(installed, requirement.Enabled);
+        enriched.PortableId = requirement.PortableId;
+        enriched.Version = "—";
+        return enriched;
+    }
+
+    private static string LegacyPortableId(string localModId)
+        => "legacy-" + HashText(localModId)[..24].ToLowerInvariant();
+
     private static ProfileModRequirement RequirementFromInstalled(InstalledMod mod, bool enabled)
     {
         var identity = !string.IsNullOrWhiteSpace(mod.PackageKey)
             ? "package|" + mod.PackageKey
-            : $"local|{mod.Loader}|{mod.Component}|{mod.Name}|{Path.GetFileName(mod.FilePath)}";
+            : !string.IsNullOrWhiteSpace(mod.IntrinsicId)
+                ? "intrinsic|" + mod.IntrinsicId
+                : $"local|{mod.Loader}|{mod.Component}|{mod.Name}|{Path.GetFileName(mod.FilePath)}";
         return new ProfileModRequirement
         {
             PortableId = "mod-" + HashText(identity)[..24].ToLowerInvariant(),
@@ -778,6 +967,7 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
             Version = mod.Version,
             Author = mod.Author,
             PackageKey = mod.PackageKey,
+            IntrinsicId = mod.IntrinsicId,
             FileName = Path.GetFileName(mod.FilePath).Replace(".disabled", "", StringComparison.OrdinalIgnoreCase),
             Source = mod.Source,
             Loader = mod.Loader,
@@ -794,6 +984,7 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
             Version = source.Version,
             Author = source.Author,
             PackageKey = source.PackageKey,
+            IntrinsicId = source.IntrinsicId,
             FileName = source.FileName,
             Source = source.Source,
             Loader = source.Loader,
@@ -812,10 +1003,19 @@ public sealed class ProfileService(ISettingsStore settingsStore) : IProfileServi
     {
         if (!string.IsNullOrWhiteSpace(requirement.PackageKey))
         {
-            var byPackage = installedMods.FirstOrDefault(mod =>
+            return installedMods.FirstOrDefault(mod =>
                 !string.IsNullOrWhiteSpace(mod.PackageKey) &&
                 mod.PackageKey!.Equals(requirement.PackageKey, StringComparison.OrdinalIgnoreCase));
-            if (byPackage is not null) return byPackage;
+        }
+
+        if (!string.IsNullOrWhiteSpace(requirement.IntrinsicId))
+        {
+            var intrinsicMatches = installedMods
+                .Where(mod => !string.IsNullOrWhiteSpace(mod.IntrinsicId) &&
+                              mod.IntrinsicId!.Equals(requirement.IntrinsicId, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (intrinsicMatches.Length == 1) return intrinsicMatches[0];
+            if (intrinsicMatches.Length > 1) return null;
         }
 
         var candidates = installedMods

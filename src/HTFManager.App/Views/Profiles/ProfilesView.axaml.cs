@@ -51,20 +51,35 @@ public partial class ProfilesView : UserControl
             AllowMultiple = false,
             FileTypeFilter = new[]
             {
-                new FilePickerFileType("HTF Manager Profile") { Patterns = new[] { "*.htfprofile" } }
+                new FilePickerFileType("HTF Manager Profiles") { Patterns = new[] { "*.htfprofile", "*.htfbundle" } },
+                new FilePickerFileType("HTF Manager Lightweight Profile") { Patterns = new[] { "*.htfprofile" } },
+                new FilePickerFileType("HTF Manager Portable Bundle") { Patterns = new[] { "*.htfbundle" } }
             }
         });
         var file = files.FirstOrDefault();
         if (file is null || !File.Exists(file.Path.LocalPath)) return;
+        if (topLevel is not Window owner) return;
 
-        var inspection = App.Services.InspectProfilePackage(file.Path.LocalPath);
+        var path = file.Path.LocalPath;
+        if (path.EndsWith(".htfbundle", StringComparison.OrdinalIgnoreCase))
+        {
+            var bundleInspection = App.Services.InspectProfileBundle(path);
+            if (!bundleInspection.IsValid)
+            {
+                App.Services.ReportOperation(false, App.Services.Localization.Get("Ops.ProfileBundleImportFailed") + ": " + bundleInspection.Error);
+                return;
+            }
+            await new ProfileBundleImportDialog(path, bundleInspection).ShowDialog<bool>(owner);
+            return;
+        }
+
+        var inspection = App.Services.InspectProfilePackage(path);
         if (!inspection.IsValid)
         {
             App.Services.ReportOperation(false, App.Services.Localization.Get("Ops.ProfileImportFailed") + ": " + inspection.Error);
             return;
         }
-        if (topLevel is Window owner)
-            await new ProfileImportDialog(file.Path.LocalPath, inspection).ShowDialog<bool>(owner);
+        await new ProfileImportDialog(path, inspection).ShowDialog<bool>(owner);
     }
 
     private void Render()
@@ -109,6 +124,7 @@ public partial class ProfilesView : UserControl
         var expanded = profile.Name.Equals(_expandedProfileName, StringComparison.OrdinalIgnoreCase);
         var active = profile.Name.Equals(App.Services.Settings.ActiveProfile, StringComparison.OrdinalIgnoreCase);
         var deleteArmed = profile.Name.Equals(_deleteArmedProfileName, StringComparison.OrdinalIgnoreCase);
+        var health = App.Services.GetProfileHealth(profile);
 
         var title = new TextBlock
         {
@@ -119,7 +135,7 @@ public partial class ProfilesView : UserControl
         };
         var meta = new TextBlock
         {
-            Text = ProfileSummary(profile) + "  ·  " + LoaderSummary(profile),
+            Text = ProfileSummary(profile, health) + "  ·  " + LoaderSummary(profile) + "  ·  " + HealthSummary(health),
             Foreground = ResourceBrush("Brush.TextSecondary"),
             FontSize = 10,
             TextTrimming = TextTrimming.CharacterEllipsis
@@ -132,7 +148,7 @@ public partial class ProfilesView : UserControl
         {
             Content = active ? App.Services.Localization.Get("Profiles.Reapply") : App.Services.Localization.Get("Profiles.Apply"),
             MinWidth = 72,
-            IsEnabled = !App.Services.Launcher.IsRunning(App.Services.Environment) && !App.Services.IsBusy && profile.UnresolvedMods.Count == 0
+            IsEnabled = !App.Services.Launcher.IsRunning(App.Services.Environment) && !App.Services.IsBusy && health.MissingCount == 0
         };
         apply.Classes.Add(active ? "secondary" : "primary");
         apply.Click += (_, _) =>
@@ -144,12 +160,27 @@ public partial class ProfilesView : UserControl
 
         var export = new Button
         {
-            Content = App.Services.Localization.Get("Profiles.Export"),
+            Content = App.Services.Localization.Get("Profiles.Share"),
             MinWidth = 72,
             IsEnabled = !App.Services.IsBusy
         };
         export.Classes.Add("secondary");
         export.Click += async (_, _) => await ExportProfileAsync(profile);
+
+        var healthButton = new Button
+        {
+            Content = App.Services.Localization.Get("Profiles.Health"),
+            MinWidth = 72,
+            IsEnabled = !App.Services.IsBusy
+        };
+        healthButton.Classes.Add("secondary");
+        healthButton.Click += async (_, _) =>
+        {
+            _deleteArmedProfileName = null;
+            _clearSnapshotArmedProfileName = null;
+            if (TopLevel.GetTopLevel(this) is Window owner)
+                await new ProfileHealthDialog(profile).ShowDialog<bool>(owner);
+        };
 
         var delete = new Button
         {
@@ -179,7 +210,7 @@ public partial class ProfilesView : UserControl
 
         var header = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto,Auto"),
+            ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto,Auto,Auto"),
             ColumnSpacing = 8
         };
         header.Children.Add(labels);
@@ -187,9 +218,11 @@ public partial class ProfilesView : UserControl
         header.Children.Add(apply);
         Grid.SetColumn(export, 2);
         header.Children.Add(export);
-        Grid.SetColumn(delete, 3);
+        Grid.SetColumn(healthButton, 3);
+        header.Children.Add(healthButton);
+        Grid.SetColumn(delete, 4);
         header.Children.Add(delete);
-        Grid.SetColumn(fold, 4);
+        Grid.SetColumn(fold, 5);
         header.Children.Add(fold);
 
         var body = new StackPanel { Spacing = 10 };
@@ -246,8 +279,9 @@ public partial class ProfilesView : UserControl
         addRow.Children.Add(add);
         editor.Children.Add(addRow);
 
-        if (profile.UnresolvedMods.Count > 0)
-            editor.Children.Add(CreateMissingModsEditor(profile));
+        var health = App.Services.GetProfileHealth(profile);
+        if (health.MissingCount > 0)
+            editor.Children.Add(CreateMissingModsEditor(profile, health));
 
         var modList = new StackPanel { Spacing = 6 };
         foreach (var entry in profile.ModStates.OrderBy(pair => DisplayName(pair.Key, installedById), StringComparer.CurrentCultureIgnoreCase))
@@ -481,26 +515,38 @@ public partial class ProfilesView : UserControl
     private async Task ExportProfileAsync(ModProfile profile)
     {
         var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.StorageProvider is null) return;
+        if (topLevel?.StorageProvider is null || topLevel is not Window owner) return;
+
+        var plan = await Task.Run(() => App.Services.BuildProfileBundleExportPlan(profile));
+        var mode = await new ProfileShareDialog(profile, plan).ShowDialog<string?>(owner);
+        if (string.IsNullOrWhiteSpace(mode)) return;
+
+        var full = mode.Equals("full", StringComparison.OrdinalIgnoreCase);
+        var extension = full ? "htfbundle" : "htfprofile";
+        var fileType = full ? "HTF Manager Portable Bundle" : "HTF Manager Profile";
         var target = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = App.Services.Localization.Get("Profiles.Export"),
-            SuggestedFileName = SuggestedProfileFileName(profile.Name) + ".htfprofile",
-            DefaultExtension = "htfprofile",
+            Title = App.Services.Localization.Get("Profiles.Share"),
+            SuggestedFileName = SuggestedProfileFileName(profile.Name) + "." + extension,
+            DefaultExtension = extension,
             FileTypeChoices = new[]
             {
-                new FilePickerFileType("HTF Manager Profile") { Patterns = new[] { "*.htfprofile" } }
+                new FilePickerFileType(fileType) { Patterns = new[] { "*." + extension } }
             }
         });
         if (target is null) return;
-        App.Services.ExportProfile(profile, target.Path.LocalPath);
+
+        if (full)
+            await App.Services.ExportProfileBundleAsync(profile, target.Path.LocalPath);
+        else
+            App.Services.ExportProfile(profile, target.Path.LocalPath);
     }
 
-    private Control CreateMissingModsEditor(ModProfile profile)
+    private Control CreateMissingModsEditor(ModProfile profile, ProfileHealthReport health)
     {
         var title = new TextBlock
         {
-            Text = string.Format(App.Services.Localization.Get("Profiles.MissingTitle"), profile.UnresolvedMods.Count),
+            Text = string.Format(App.Services.Localization.Get("Profiles.MissingTitle"), health.MissingCount),
             FontWeight = FontWeight.SemiBold,
             FontSize = 12
         };
@@ -536,7 +582,10 @@ public partial class ProfilesView : UserControl
         header.Children.Add(resolve);
 
         var list = new StackPanel { Spacing = 5 };
-        foreach (var requirement in profile.UnresolvedMods.OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase))
+        foreach (var requirement in health.Items
+                     .Where(item => item.Status == ProfileHealthStatus.Missing)
+                     .Select(item => item.Expectation.Requirement)
+                     .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase))
         {
             var labels = new StackPanel { Spacing = 1 };
             labels.Children.Add(new TextBlock
@@ -549,7 +598,11 @@ public partial class ProfilesView : UserControl
             labels.Children.Add(new TextBlock
             {
                 Text = $"{LoaderLabel(requirement.Loader)} · {requirement.Version}" +
-                       (string.IsNullOrWhiteSpace(requirement.PackageKey) ? "" : $" · {requirement.PackageKey}"),
+                       (!string.IsNullOrWhiteSpace(requirement.PackageKey)
+                           ? $" · {requirement.PackageKey}"
+                           : !string.IsNullOrWhiteSpace(requirement.IntrinsicId)
+                               ? $" · {requirement.IntrinsicId}"
+                               : ""),
                 Foreground = ResourceBrush("Brush.TextSecondary"),
                 FontSize = 9,
                 TextTrimming = TextTrimming.CharacterEllipsis
@@ -629,15 +682,26 @@ public partial class ProfilesView : UserControl
         App.Services.DeleteProfile(profile);
     }
 
-    private string ProfileSummary(ModProfile profile)
+    private string ProfileSummary(ModProfile profile, ProfileHealthReport health)
     {
         var enabledCount = profile.ModStates.Count(pair => pair.Value);
         var text = $"{profile.ModStates.Count} {App.Services.Localization.Get("Nav.Mods")}  ·  {enabledCount} {App.Services.Localization.Get("Common.Enabled")}";
         if (profile.ConfigurationSnapshots.Count > 0)
             text += $"  ·  {profile.ConfigurationSnapshots.Count} {App.Services.Localization.Get("Profiles.ConfigSnapshotsShort")}";
-        if (profile.UnresolvedMods.Count > 0)
-            text += $"  ·  {profile.UnresolvedMods.Count} {App.Services.Localization.Get("Profiles.MissingShort")}";
+        if (health.MissingCount > 0)
+            text += $"  ·  {health.MissingCount} {App.Services.Localization.Get("Profiles.MissingShort")}";
         return text;
+    }
+
+    private string HealthSummary(ProfileHealthReport health)
+    {
+        if (health.MissingCount > 0)
+            return $"{health.MissingCount} {App.Services.Localization.Get("Health.MissingShort")}";
+        if (health.VersionMismatchCount > 0)
+            return $"{health.VersionMismatchCount} {App.Services.Localization.Get("Health.DriftShort")}";
+        if (health.IdentityUncertainCount > 0)
+            return $"{health.IdentityUncertainCount} {App.Services.Localization.Get("Health.UncertainShort")}";
+        return App.Services.Localization.Get("Health.HealthyShort");
     }
 
     private string SnapshotSummary(ModProfile profile)

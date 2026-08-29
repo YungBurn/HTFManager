@@ -1,9 +1,9 @@
 {
   "project": "HTFManager",
   "productName": "HTF Manager",
-  "version": "0.3.6",
-  "status": "stable-development-baseline",
-  "buildVerified": true,
+  "version": "0.3.7",
+  "status": "release-candidate",
+  "buildVerified": false,
   "solution": "HTFManager.slnx",
   "appProject": "src/HTFManager.App/HTFManager.App.csproj",
   "targetFramework": "net10.0",
@@ -15,6 +15,6 @@
   ],
   "repository": "https://github.com/YungBurn/HTFManager",
   "defaultBranch": "main",
-  "nextPlannedVersion": "0.3.7",
-  "nextPlannedFeature": "Portable Profile Bundle & Health"
+  "nextPlannedVersion": "0.3.8",
+  "nextPlannedFeature": "Profile Version Reconciliation"
 }

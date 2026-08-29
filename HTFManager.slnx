@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="src/HTFManager.Core/HTFManager.Core.csproj" />
   <Project Path="src/HTFManager.Infrastructure/HTFManager.Infrastructure.csproj" />
+  <Project Path="tests/HTFManager.Tests/HTFManager.Tests.csproj" />
   <Project Path="src/HTFManager.App/HTFManager.App.csproj" />
 </Solution>

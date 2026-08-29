@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`.htfbundle` is the full portable-profile container introduced for v0.3.7 planning. It is ZIP-compatible on disk but uses a dedicated extension so HTF Manager can distinguish it from an ordinary Mod `.zip` package.
+`.htfbundle` is the full portable-profile container introduced in v0.3.7. It is ZIP-compatible on disk but uses a dedicated extension so HTF Manager can distinguish it from an ordinary Mod `.zip` package.
 
 The archive is a **profile container with optional package payloads**, not an installer.
 
@@ -24,7 +24,7 @@ The archive is a **profile container with optional package payloads**, not an in
 Schema v1 permits exactly:
 
 - one root `bundle.json`;
-- one embedded profile entry referenced by `bundle.json` (recommended default `profile.htfprofile`);
+- exactly one root `profile.htfprofile` entry referenced by `bundle.json`;
 - zero or more payload entries referenced by the manifest;
 - no executable behavior from arbitrary unreferenced archive entries.
 
@@ -44,6 +44,7 @@ Illustrative contract:
     {
       "portableId": "...",
       "packageKey": "Author-ModName",
+      "intrinsicId": null,
       "version": "1.2.0",
       "source": "Thunderstore",
       "artifactKind": "Archive",
@@ -69,7 +70,7 @@ HTF Manager application version that created the bundle.
 
 ### `profileEntry`
 
-Relative archive path to the embedded `.htfprofile`.
+Schema v1 requires this to be the root path `profile.htfprofile`. Keeping the location fixed avoids ambiguous critical-entry layouts while the manifest still records the path explicitly for forward compatibility.
 
 ### `profileSha256`
 
@@ -83,6 +84,7 @@ Required payload identity data:
 
 - `portableId`;
 - `packageKey` when the profile has a trusted provider identity;
+- `intrinsicId` when a local Mod has a deterministic intrinsic identity and no provider key;
 - expected `version` when known;
 - `source`;
 - artifact kind;
@@ -108,11 +110,19 @@ At minimum validate, when present:
 ```text
 portableId
 PackageKey
+IntrinsicId
 expected version
 source
 ```
 
 A matching hash does not override an identity mismatch.
+
+
+### Local intrinsic identity
+
+Schema v1 keeps provider and local identity separate. A local managed package may have `packageKey = null` and an `intrinsicId` obtained from static Mod metadata. For BepInEx this is the `BepInPlugin` GUID (for example `com.moddle.howtofish.truedot`). HTF Manager must not fabricate a Thunderstore-style `PackageKey` from this value.
+
+A local payload is eligible only when the corresponding profile expectation has the same deterministic intrinsic identity, an exact expected version, a matching logical source, and a verified retained HTF-managed source artifact. Ambiguous or missing intrinsic identity remains manual.
 
 ## Read order
 

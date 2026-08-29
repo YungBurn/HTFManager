@@ -12,7 +12,8 @@
 ```powershell
 dotnet --version
 dotnet restore HTFManager.slnx
-dotnet build HTFManager.slnx
+dotnet build HTFManager.slnx --configuration Release --no-restore
+dotnet test --project tests/HTFManager.Tests/HTFManager.Tests.csproj --configuration Release --no-build --no-restore
 ```
 
 Run:
@@ -53,10 +54,36 @@ Before distributing a package:
 
 ```powershell
 dotnet restore HTFManager.slnx
-dotnet build HTFManager.slnx
+dotnet build HTFManager.slnx --configuration Release --no-restore
+dotnet test --project tests/HTFManager.Tests/HTFManager.Tests.csproj --configuration Release --no-build --no-restore
 ```
 
 Then inspect the UI path affected by the patch.
+
+## v0.3.7 portable bundle validation
+
+Before treating the full v0.3.7 implementation as release-ready, validate both automated tests and a two-environment smoke flow:
+
+```text
+Machine/profile A
+→ create/capture a profile
+→ Share Profile → Full portable bundle
+→ verify a .htfbundle is created
+
+Receiver environment B
+→ open/import the .htfbundle
+→ confirm the embedded .htfprofile is inspected before any Mod installation
+→ confirm already-healthy Mods are not offered for reinstall
+→ confirm Missing + bundled exact Mods can enter Package Inspector
+→ confirm VersionMismatch is warning-only and is not automatically replaced
+→ verify a manifest-less managed BepInEx local ZIP/DLL with a unique BepInPlugin GUID/version is eligible for Full share
+→ verify duplicate/ambiguous intrinsic identities are not auto-matched/bundled
+→ install one bundled Missing Mod through Package Inspector
+→ confirm profile health/restore state refreshes
+→ confirm applying the profile remains a separate explicit action
+```
+
+The final v0.3.7 automated suite is expected to contain 54 tests after the intrinsic-local-identity release enhancement. Generated `*.htfprofile` and `*.htfbundle` files are local artifacts and should not be committed accidentally. Bundle security/unit tests must remain part of the normal `dotnet test` run.
 
 ## Creating a handoff archive
 

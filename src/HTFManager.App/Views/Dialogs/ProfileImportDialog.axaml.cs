@@ -62,7 +62,11 @@ public partial class ProfileImportDialog : Window
         labels.Children.Add(new TextBlock
         {
             Text = $"{LoaderLabel(requirement.Loader)} · {requirement.Version}" +
-                   (string.IsNullOrWhiteSpace(requirement.PackageKey) ? "" : $" · {requirement.PackageKey}") +
+                   (!string.IsNullOrWhiteSpace(requirement.PackageKey)
+                       ? $" · {requirement.PackageKey}"
+                       : !string.IsNullOrWhiteSpace(requirement.IntrinsicId)
+                           ? $" · {requirement.IntrinsicId}"
+                           : "") +
                    (preview.Matched && !preview.VersionMatches
                        ? $" · {App.Services.Localization.Get("ProfileImport.InstalledVersion")}: {preview.MatchedInstalledVersion ?? "—"}"
                        : ""),

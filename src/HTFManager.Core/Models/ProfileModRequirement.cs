@@ -7,6 +7,7 @@ public sealed class ProfileModRequirement
     public string Version { get; set; } = "—";
     public string Author { get; set; } = "";
     public string? PackageKey { get; set; }
+    public string? IntrinsicId { get; set; }
     public string FileName { get; set; } = "";
     public ModSourceType Source { get; set; } = ModSourceType.External;
     public ModLoaderKind Loader { get; set; } = ModLoaderKind.Unknown;
